@@ -9,14 +9,14 @@ __pycache__/
 .env
 
 # Runtime output
-logs/
-runs/
+/logs/
+/runs/
 *.db
 *.sqlite3
 
 # Build outputs and packaged zips (rebuild with scripts/package_for_kaggle.py)
-dist/
-backups/
+/dist/
+/backups/
 
 # Frontend: dependencies only. ui/dist (the built dashboard) IS tracked so the
 # app runs without Node installed.
