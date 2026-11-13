@@ -1,0 +1,9 @@
+# Same as requirements.txt, but with the NVIDIA GPU build of PyTorch.
+#     .venv\Scripts\python.exe -m pip install -r requirements-gpu.txt
+# setup_gpu.bat runs this for you. The "+cu126" builds work with NVIDIA
+# drivers from mid-2024 onwards; on a machine without a GPU they still run,
+# on the CPU.
+--extra-index-url https://download.pytorch.org/whl/cu126
+torch==2.13.0+cu126
+torchvision==0.28.0+cu126
+-r requirements.txt

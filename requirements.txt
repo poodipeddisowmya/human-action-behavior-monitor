@@ -1,0 +1,40 @@
+# Runtime dependencies. Everything needed to run the monitor is here.
+#
+# IMPORTANT — Python 3.10, 3.11 or 3.12.
+# numpy 1.26.4 publishes no wheels for 3.13+, so a newer Python turns this
+# install into a source build that fails with a compiler error. 3.11 is what
+# the system is developed and tested against.
+#
+# Optional extras live in requirements-optional.txt and are NOT needed:
+# they cover the alternative VideoMAE backend and offline metrics only.
+
+# --- Core CV / ML ---
+ultralytics==8.3.0           # YOLOv8-pose detector + built-in ByteTrack
+lapx>=0.5.2                  # ByteTrack's linear assignment (ultralytics needs it)
+opencv-python==4.10.0.84
+numpy==1.26.4
+torch>=2.1.0
+torchvision>=0.16.0          # provides the S3D action model (default backend)
+transformers==4.53.3         # CLIP (places), VideoMAE (GPU activity model),
+                             # SmolVLM2 (GPU detailed subtitles; needs >= 4.50)
+num2words==0.5.14            # required by the SmolVLM2 processor
+
+# --- Backend ---
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+websockets==13.0.1
+pydantic==2.9.2
+sqlalchemy==2.0.35
+aiosqlite==0.20.0
+python-multipart==0.0.9      # file uploads
+
+# --- Utilities ---
+pyyaml==6.0.2
+loguru==0.7.2
+tqdm==4.66.5
+python-dotenv==1.0.1
+
+# --- Dev / test ---
+pytest==8.3.3
+pytest-asyncio==0.24.0
+httpx==0.27.2
