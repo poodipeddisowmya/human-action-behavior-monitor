@@ -1,0 +1,48 @@
+import { useEffect, useState, useCallback } from "react";
+import VideoStream, { Caption } from "./VideoStream";
+import PersonList from "./PersonList";
+import PersonDetail from "./PersonDetail";
+import EventFeed from "./EventFeed";
+import { api, EventMessage, PersonSummary } from "../services/api";
+import { useWebSocket } from "../hooks/useWebSocket";
+
+export default function Dashboard() {
+  const [persons, setPersons] = useState<PersonSummary[]>([]);
+  const [events, setEvents]   = useState<EventMessage[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [liveAnnotations, setLiveAnnotations] = useState<any[]>([]);
+  const [caption, setCaption] = useState<Caption | null>(null);
+
+  const refreshPersons = useCallback(async () => {
+    try { setPersons(await api.listPersons()); } catch {}
+  }, []);
+
+  useEffect(() => {
+    refreshPersons();
+    api.recentEvents(50).then(setEvents).catch(() => {});
+  }, [refreshPersons]);
+
+  useWebSocket((msg) => {
+    if (msg.type === "event") {
+      setEvents((prev) => [msg, ...prev].slice(0, 200));
+      refreshPersons();
+    } else if (msg.type === "frame_annotations") {
+      setLiveAnnotations(msg.annotations);
+      if (msg.caption) setCaption(msg.caption);
+    }
+  });
+
+  return (
+    <div className="grid grid-cols-12 gap-6">
+      <section className="col-span-12 xl:col-span-8 space-y-6">
+        <VideoStream annotations={liveAnnotations} caption={caption} />
+        <EventFeed events={events} onSelect={setSelected} />
+      </section>
+
+      <aside className="col-span-12 xl:col-span-4 space-y-6">
+        <PersonList persons={persons} selected={selected} onSelect={setSelected} />
+        {selected && <PersonDetail personId={selected} />}
+      </aside>
+    </div>
+  );
+}

@@ -1,0 +1,24 @@
+# Optional extras — NOT needed to run the monitor.
+#
+# These were moved out of requirements.txt because they are large, their wheels
+# are sensitive to the exact Python version, and nothing on the default code
+# path imports them. Installing them was a common way for setup to fail on a
+# machine that would otherwise have worked.
+#
+#     pip install -r requirements-optional.txt
+
+# Alternative deep backend. Only needed if you set
+# `deep_backend: videomae` in config/model_config.yaml. The default (s3d)
+# comes from torchvision and needs nothing here. VideoMAE is ~7x slower on
+# CPU for a small accuracy difference — see docs/MODEL_SELECTION.md.
+transformers==4.53.3
+huggingface-hub>=0.24.0
+
+# Offline evaluation metrics (src/evaluation/metrics.py). Not imported by the
+# running application.
+scikit-learn==1.5.1
+
+# Legacy pose estimator (src/action_recognition/pose_estimator.py), superseded
+# by YOLOv8-pose which produces keypoints in the same pass as detection. The
+# module degrades gracefully when this is absent.
+mediapipe==0.10.14

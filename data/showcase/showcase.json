@@ -1,0 +1,1912 @@
+{
+  "gpu": "Tesla T4",
+  "recorded": "2026-11-06 08:27 UTC",
+  "seconds_per_clip": 12,
+  "minutes": 15.6,
+  "before_settings": {
+    "DEEP_BACKEND": "s3d",
+    "LABEL_MIN_DWELL_S": "0",
+    "DETECTOR_IMGSZ_HD": "0"
+  },
+  "clips": [
+    {
+      "video": "demo-eating.avi",
+      "device": "cuda",
+      "frames": 360,
+      "processing_fps": 29.7,
+      "people": 14,
+      "events": 25,
+      "by_label": {
+        "standing": {
+          "events": 11,
+          "seconds": 21.8
+        },
+        "walking": {
+          "events": 3,
+          "seconds": 3.7
+        },
+        "running": {
+          "events": 9,
+          "seconds": 2.1
+        },
+        "sitting": {
+          "events": 2,
+          "seconds": 0.1
+        }
+      },
+      "labels_shown": {
+        "standing": 0.787,
+        "walking": 0.135,
+        "running": 0.075,
+        "sitting": 0.002
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.37,
+        "running": 0.6,
+        "standing": 1.17,
+        "walking": 1.33,
+        "sitting": 4.93
+      },
+      "label_changes_per_10s": 16.67,
+      "tracked_mean": 2.53,
+      "tracked_max": 4,
+      "annotated_video": "demo-eating_annotated.mp4",
+      "expected": "eating"
+    },
+    {
+      "video": "demo-drinking.mp4",
+      "device": "cuda",
+      "frames": 287,
+      "processing_fps": 22.0,
+      "people": 1,
+      "events": 2,
+      "by_label": {
+        "drinking": {
+          "events": 1,
+          "seconds": 8.4
+        },
+        "sitting": {
+          "events": 1,
+          "seconds": 4.2
+        }
+      },
+      "labels_shown": {
+        "drinking": 0.665,
+        "sitting": 0.335
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.33,
+        "sitting": 0.38,
+        "drinking": 4.25
+      },
+      "label_changes_per_10s": 1.67,
+      "tracked_mean": 0.97,
+      "tracked_max": 1,
+      "annotated_video": "demo-drinking_annotated.mp4",
+      "expected": "drinking"
+    },
+    {
+      "video": "demo-cooking.mp4",
+      "device": "cuda",
+      "frames": 287,
+      "processing_fps": 22.1,
+      "people": 1,
+      "events": 3,
+      "by_label": {
+        "cooking": {
+          "events": 2,
+          "seconds": 11.0
+        },
+        "standing": {
+          "events": 1,
+          "seconds": 0.8
+        }
+      },
+      "labels_shown": {
+        "cooking": 0.934,
+        "standing": 0.066
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.33,
+        "standing": 0.5,
+        "cooking": 1.21
+      },
+      "label_changes_per_10s": 1.67,
+      "tracked_mean": 0.92,
+      "tracked_max": 1,
+      "annotated_video": "demo-cooking_annotated.mp4",
+      "expected": "cooking"
+    },
+    {
+      "video": "demo-smoking.mp4",
+      "device": "cuda",
+      "frames": 287,
+      "processing_fps": 22.1,
+      "people": 1,
+      "events": 2,
+      "by_label": {
+        "smoking": {
+          "events": 1,
+          "seconds": 11.7
+        },
+        "sitting": {
+          "events": 1,
+          "seconds": 0.9
+        }
+      },
+      "labels_shown": {
+        "smoking": 0.925,
+        "sitting": 0.075
+      },
+      "first_seen_s": {
+        "sitting": 0.33,
+        "smoking": 1.21
+      },
+      "label_changes_per_10s": 0.84,
+      "tracked_mean": 0.97,
+      "tracked_max": 1,
+      "annotated_video": "demo-smoking_annotated.mp4",
+      "expected": "smoking"
+    },
+    {
+      "video": "demo-brushing-teeth.mp4",
+      "device": "cuda",
+      "frames": 300,
+      "processing_fps": 16.1,
+      "people": 1,
+      "events": 2,
+      "by_label": {
+        "brushing teeth": {
+          "events": 1,
+          "seconds": 17.2
+        },
+        "sitting": {
+          "events": 1,
+          "seconds": 0.7
+        }
+      },
+      "labels_shown": {
+        "brushing teeth": 0.951,
+        "sitting": 0.049
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.32,
+        "sitting": 0.56,
+        "brushing teeth": 1.12
+      },
+      "label_changes_per_10s": 1.67,
+      "tracked_mean": 0.97,
+      "tracked_max": 1,
+      "annotated_video": "demo-brushing-teeth_annotated.mp4",
+      "expected": "brushing teeth"
+    },
+    {
+      "video": "demo-cleaning-mopping.avi",
+      "device": "cuda",
+      "frames": 300,
+      "processing_fps": 24.8,
+      "people": 1,
+      "events": 3,
+      "by_label": {
+        "cleaning": {
+          "events": 1,
+          "seconds": 9.9
+        },
+        "standing": {
+          "events": 2,
+          "seconds": 1.8
+        }
+      },
+      "labels_shown": {
+        "cleaning": 0.845,
+        "standing": 0.155
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.32,
+        "standing": 0.4,
+        "cleaning": 2.2
+      },
+      "label_changes_per_10s": 1.67,
+      "tracked_mean": 0.97,
+      "tracked_max": 1,
+      "annotated_video": "demo-cleaning-mopping_annotated.mp4",
+      "expected": "cleaning"
+    },
+    {
+      "video": "demo-using-computer.avi",
+      "device": "cuda",
+      "frames": 300,
+      "processing_fps": 24.8,
+      "people": 5,
+      "events": 10,
+      "by_label": {
+        "using computer": {
+          "events": 9,
+          "seconds": 12.4
+        },
+        "sitting": {
+          "events": 1,
+          "seconds": 0.7
+        }
+      },
+      "labels_shown": {
+        "using computer": 0.944,
+        "sitting": 0.056
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.36,
+        "sitting": 0.52,
+        "using computer": 1.24
+      },
+      "label_changes_per_10s": 1.67,
+      "tracked_mean": 1.09,
+      "tracked_max": 2,
+      "annotated_video": "demo-using-computer_annotated.mp4",
+      "expected": "using computer"
+    },
+    {
+      "video": "demo-writing.avi",
+      "device": "cuda",
+      "frames": 300,
+      "processing_fps": 24.8,
+      "people": 1,
+      "events": 2,
+      "by_label": {
+        "writing": {
+          "events": 1,
+          "seconds": 10.9
+        },
+        "standing": {
+          "events": 1,
+          "seconds": 0.8
+        }
+      },
+      "labels_shown": {
+        "writing": 0.928,
+        "standing": 0.072
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.32,
+        "standing": 0.36,
+        "writing": 1.2
+      },
+      "label_changes_per_10s": 1.67,
+      "tracked_mean": 0.97,
+      "tracked_max": 1,
+      "annotated_video": "demo-writing_annotated.mp4",
+      "expected": "writing"
+    },
+    {
+      "video": "demo-cycling.avi",
+      "device": "cuda",
+      "frames": 359,
+      "processing_fps": 28.8,
+      "people": 2,
+      "events": 5,
+      "by_label": {
+        "running": {
+          "events": 2,
+          "seconds": 0.6
+        },
+        "cycling": {
+          "events": 2,
+          "seconds": 0.5
+        },
+        "standing": {
+          "events": 1,
+          "seconds": 0.0
+        }
+      },
+      "labels_shown": {
+        "running": 0.545,
+        "cycling": 0.424,
+        "standing": 0.03
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.4,
+        "standing": 4.74,
+        "running": 4.9,
+        "cycling": 9.48
+      },
+      "label_changes_per_10s": 1.67,
+      "tracked_mean": 0.11,
+      "tracked_max": 1,
+      "annotated_video": "demo-cycling_annotated.mp4",
+      "expected": "cycling"
+    },
+    {
+      "video": "demo-exercising-pushup.avi",
+      "device": "cuda",
+      "frames": 300,
+      "processing_fps": 24.8,
+      "people": 1,
+      "events": 6,
+      "by_label": {
+        "exercising": {
+          "events": 2,
+          "seconds": 10.5
+        },
+        "sitting": {
+          "events": 2,
+          "seconds": 0.6
+        },
+        "standing": {
+          "events": 1,
+          "seconds": 0.4
+        },
+        "walking": {
+          "events": 1,
+          "seconds": 0.2
+        }
+      },
+      "labels_shown": {
+        "exercising": 0.893,
+        "sitting": 0.055,
+        "standing": 0.031,
+        "walking": 0.021
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.32,
+        "standing": 0.36,
+        "sitting": 0.76,
+        "exercising": 0.88,
+        "walking": 1.72
+      },
+      "label_changes_per_10s": 5.83,
+      "tracked_mean": 0.97,
+      "tracked_max": 1,
+      "annotated_video": "demo-exercising-pushup_annotated.mp4",
+      "expected": "exercising"
+    },
+    {
+      "video": "demo-exercising-squats.avi",
+      "device": "cuda",
+      "frames": 300,
+      "processing_fps": 24.8,
+      "people": 1,
+      "events": 4,
+      "by_label": {
+        "exercising": {
+          "events": 1,
+          "seconds": 10.9
+        },
+        "running": {
+          "events": 1,
+          "seconds": 0.4
+        },
+        "standing": {
+          "events": 1,
+          "seconds": 0.3
+        },
+        "sitting": {
+          "events": 1,
+          "seconds": 0.2
+        }
+      },
+      "labels_shown": {
+        "exercising": 0.924,
+        "running": 0.031,
+        "standing": 0.024,
+        "sitting": 0.021
+      },
+      "first_seen_s": {
+        "sitting": 0.36,
+        "standing": 0.6,
+        "running": 0.88,
+        "exercising": 1.24
+      },
+      "label_changes_per_10s": 2.5,
+      "tracked_mean": 0.97,
+      "tracked_max": 1,
+      "annotated_video": "demo-exercising-squats_annotated.mp4",
+      "expected": "exercising"
+    },
+    {
+      "video": "demo-exercising-pullup.avi",
+      "device": "cuda",
+      "frames": 359,
+      "processing_fps": 28.8,
+      "people": 1,
+      "events": 2,
+      "by_label": {
+        "exercising": {
+          "events": 1,
+          "seconds": 11.3
+        },
+        "standing": {
+          "events": 1,
+          "seconds": 0.8
+        }
+      },
+      "labels_shown": {
+        "exercising": 0.934,
+        "standing": 0.066
+      },
+      "first_seen_s": {
+        "standing": 0.33,
+        "exercising": 1.1
+      },
+      "label_changes_per_10s": 0.83,
+      "tracked_mean": 0.97,
+      "tracked_max": 1,
+      "annotated_video": "demo-exercising-pullup_annotated.mp4",
+      "expected": "exercising"
+    },
+    {
+      "video": "demo-basic-sit.avi",
+      "device": "cuda",
+      "frames": 360,
+      "processing_fps": 29.7,
+      "people": 4,
+      "events": 39,
+      "by_label": {
+        "sitting": {
+          "events": 18,
+          "seconds": 20.0
+        },
+        "standing": {
+          "events": 11,
+          "seconds": 10.7
+        },
+        "running": {
+          "events": 8,
+          "seconds": 3.0
+        },
+        "walking": {
+          "events": 2,
+          "seconds": 0.4
+        }
+      },
+      "labels_shown": {
+        "sitting": 0.586,
+        "standing": 0.315,
+        "running": 0.087,
+        "walking": 0.011
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.33,
+        "sitting": 0.37,
+        "running": 0.43,
+        "standing": 0.67,
+        "walking": 1.13
+      },
+      "label_changes_per_10s": 29.17,
+      "tracked_mean": 2.83,
+      "tracked_max": 3,
+      "annotated_video": "demo-basic-sit_annotated.mp4",
+      "expected": "sitting"
+    },
+    {
+      "video": "demo-basic-walk.avi",
+      "device": "cuda",
+      "frames": 360,
+      "processing_fps": 29.7,
+      "people": 3,
+      "events": 16,
+      "by_label": {
+        "walking": {
+          "events": 9,
+          "seconds": 2.0
+        },
+        "running": {
+          "events": 7,
+          "seconds": 1.8
+        }
+      },
+      "labels_shown": {
+        "walking": 0.522,
+        "running": 0.478
+      },
+      "first_seen_s": {
+        "detecting\u2026": 1.83,
+        "walking": 2.03,
+        "running": 2.4
+      },
+      "label_changes_per_10s": 8.33,
+      "tracked_mean": 0.36,
+      "tracked_max": 1,
+      "annotated_video": "demo-basic-walk_annotated.mp4",
+      "expected": "walking"
+    },
+    {
+      "video": "demo-basic-run.avi",
+      "device": "cuda",
+      "frames": 360,
+      "processing_fps": 29.7,
+      "people": 12,
+      "events": 20,
+      "by_label": {
+        "running": {
+          "events": 11,
+          "seconds": 14.2
+        },
+        "dancing": {
+          "events": 7,
+          "seconds": 5.3
+        },
+        "walking": {
+          "events": 1,
+          "seconds": 0.6
+        },
+        "standing": {
+          "events": 1,
+          "seconds": 0.1
+        }
+      },
+      "labels_shown": {
+        "running": 0.706,
+        "dancing": 0.263,
+        "walking": 0.028,
+        "standing": 0.003
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.33,
+        "standing": 0.43,
+        "running": 0.43,
+        "walking": 0.53,
+        "dancing": 9.2
+      },
+      "label_changes_per_10s": 10.0,
+      "tracked_mean": 1.74,
+      "tracked_max": 3,
+      "annotated_video": "demo-basic-run_annotated.mp4",
+      "expected": "running"
+    },
+    {
+      "video": "hd-cooking.mp4",
+      "device": "cuda",
+      "frames": 300,
+      "processing_fps": 23.9,
+      "people": 1,
+      "events": 2,
+      "by_label": {
+        "cooking": {
+          "events": 1,
+          "seconds": 11.3
+        },
+        "standing": {
+          "events": 1,
+          "seconds": 0.7
+        }
+      },
+      "labels_shown": {
+        "cooking": 0.941,
+        "standing": 0.059
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.36,
+        "standing": 0.56,
+        "cooking": 1.24
+      },
+      "label_changes_per_10s": 1.67,
+      "tracked_mean": 0.97,
+      "tracked_max": 1,
+      "annotated_video": "hd-cooking_annotated.mp4",
+      "expected": "cooking"
+    },
+    {
+      "video": "hd-dancing-2.mp4",
+      "device": "cuda",
+      "frames": 300,
+      "processing_fps": 23.8,
+      "people": 1,
+      "events": 8,
+      "by_label": {
+        "standing": {
+          "events": 3,
+          "seconds": 6.1
+        },
+        "walking": {
+          "events": 4,
+          "seconds": 5.3
+        },
+        "running": {
+          "events": 1,
+          "seconds": 0.7
+        }
+      },
+      "labels_shown": {
+        "standing": 0.505,
+        "walking": 0.436,
+        "running": 0.058
+      },
+      "first_seen_s": {
+        "standing": 0.36,
+        "walking": 1.24,
+        "running": 9.64
+      },
+      "label_changes_per_10s": 5.83,
+      "tracked_mean": 0.97,
+      "tracked_max": 1,
+      "annotated_video": "hd-dancing-2_annotated.mp4",
+      "expected": "dancing"
+    },
+    {
+      "video": "hd-dancing-3.mp4",
+      "device": "cuda",
+      "frames": 300,
+      "processing_fps": 23.9,
+      "people": 25,
+      "events": 102,
+      "by_label": {
+        "standing": {
+          "events": 22,
+          "seconds": 26.8
+        },
+        "sitting": {
+          "events": 31,
+          "seconds": 17.7
+        },
+        "walking": {
+          "events": 23,
+          "seconds": 12.0
+        },
+        "running": {
+          "events": 16,
+          "seconds": 10.0
+        },
+        "dancing": {
+          "events": 10,
+          "seconds": 6.4
+        }
+      },
+      "labels_shown": {
+        "standing": 0.371,
+        "sitting": 0.24,
+        "walking": 0.167,
+        "running": 0.135,
+        "dancing": 0.087
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.32,
+        "standing": 0.36,
+        "sitting": 0.36,
+        "running": 0.52,
+        "walking": 0.56,
+        "dancing": 11.12
+      },
+      "label_changes_per_10s": 97.5,
+      "tracked_mean": 6.07,
+      "tracked_max": 8,
+      "annotated_video": "hd-dancing-3_annotated.mp4",
+      "expected": "dancing"
+    },
+    {
+      "video": "hd-dancing-4.mp4",
+      "device": "cuda",
+      "frames": 300,
+      "processing_fps": 23.9,
+      "people": 15,
+      "events": 66,
+      "by_label": {
+        "standing": {
+          "events": 28,
+          "seconds": 30.5
+        },
+        "running": {
+          "events": 15,
+          "seconds": 10.5
+        },
+        "walking": {
+          "events": 14,
+          "seconds": 4.8
+        },
+        "sitting": {
+          "events": 5,
+          "seconds": 3.0
+        },
+        "bending": {
+          "events": 4,
+          "seconds": 1.2
+        }
+      },
+      "labels_shown": {
+        "standing": 0.611,
+        "running": 0.217,
+        "walking": 0.09,
+        "sitting": 0.057,
+        "bending": 0.026
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.36,
+        "standing": 0.52,
+        "running": 0.52,
+        "walking": 0.56,
+        "bending": 2.2,
+        "sitting": 2.76
+      },
+      "label_changes_per_10s": 61.67,
+      "tracked_mean": 4.26,
+      "tracked_max": 6,
+      "annotated_video": "hd-dancing-4_annotated.mp4",
+      "expected": "dancing"
+    },
+    {
+      "video": "hd-dancing.mp4",
+      "device": "cuda",
+      "frames": 300,
+      "processing_fps": 24.0,
+      "people": 1,
+      "events": 2,
+      "by_label": {
+        "dancing": {
+          "events": 1,
+          "seconds": 11.3
+        },
+        "standing": {
+          "events": 1,
+          "seconds": 0.9
+        }
+      },
+      "labels_shown": {
+        "dancing": 0.928,
+        "standing": 0.072
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.32,
+        "standing": 0.36,
+        "dancing": 1.2
+      },
+      "label_changes_per_10s": 1.67,
+      "tracked_mean": 0.97,
+      "tracked_max": 1,
+      "annotated_video": "hd-dancing_annotated.mp4",
+      "expected": "dancing"
+    },
+    {
+      "video": "hd-drinking-2.mp4",
+      "device": "cuda",
+      "frames": 300,
+      "processing_fps": 24.0,
+      "people": 1,
+      "events": 2,
+      "by_label": {
+        "drinking": {
+          "events": 1,
+          "seconds": 10.2
+        },
+        "sitting": {
+          "events": 1,
+          "seconds": 1.7
+        }
+      },
+      "labels_shown": {
+        "drinking": 0.854,
+        "sitting": 0.146
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.32,
+        "sitting": 0.52,
+        "drinking": 2.2
+      },
+      "label_changes_per_10s": 1.67,
+      "tracked_mean": 0.97,
+      "tracked_max": 1,
+      "annotated_video": "hd-drinking-2_annotated.mp4",
+      "expected": "drinking"
+    },
+    {
+      "video": "hd-drinking.mp4",
+      "device": "cuda",
+      "frames": 359,
+      "processing_fps": 27.7,
+      "people": 1,
+      "events": 2,
+      "by_label": {
+        "drinking": {
+          "events": 1,
+          "seconds": 10.8
+        },
+        "standing": {
+          "events": 1,
+          "seconds": 1.6
+        }
+      },
+      "labels_shown": {
+        "drinking": 0.866,
+        "standing": 0.134
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.3,
+        "standing": 0.5,
+        "drinking": 2.04
+      },
+      "label_changes_per_10s": 1.67,
+      "tracked_mean": 0.97,
+      "tracked_max": 1,
+      "annotated_video": "hd-drinking_annotated.mp4",
+      "expected": "drinking"
+    },
+    {
+      "video": "hd-eating-2.mp4",
+      "device": "cuda",
+      "frames": 359,
+      "processing_fps": 27.7,
+      "people": 6,
+      "events": 16,
+      "by_label": {
+        "eating": {
+          "events": 14,
+          "seconds": 9.5
+        },
+        "standing": {
+          "events": 2,
+          "seconds": 0.9
+        }
+      },
+      "labels_shown": {
+        "eating": 0.906,
+        "standing": 0.094
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.33,
+        "standing": 1.13,
+        "eating": 2.07
+      },
+      "label_changes_per_10s": 3.34,
+      "tracked_mean": 0.87,
+      "tracked_max": 2,
+      "annotated_video": "hd-eating-2_annotated.mp4",
+      "expected": "eating"
+    },
+    {
+      "video": "hd-eating.mp4",
+      "device": "cuda",
+      "frames": 300,
+      "processing_fps": 24.0,
+      "people": 3,
+      "events": 4,
+      "by_label": {
+        "eating": {
+          "events": 3,
+          "seconds": 14.9
+        },
+        "sitting": {
+          "events": 1,
+          "seconds": 0.8
+        }
+      },
+      "labels_shown": {
+        "eating": 0.949,
+        "sitting": 0.051
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.32,
+        "sitting": 1.2,
+        "eating": 1.96
+      },
+      "label_changes_per_10s": 1.67,
+      "tracked_mean": 1.32,
+      "tracked_max": 2,
+      "annotated_video": "hd-eating_annotated.mp4",
+      "expected": "eating"
+    },
+    {
+      "video": "hd-smoking-2.mp4",
+      "device": "cuda",
+      "frames": 300,
+      "processing_fps": 24.0,
+      "people": 1,
+      "events": 1,
+      "by_label": {
+        "smoking": {
+          "events": 1,
+          "seconds": 11.3
+        }
+      },
+      "labels_shown": {
+        "smoking": 1.0
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.32,
+        "smoking": 1.2
+      },
+      "label_changes_per_10s": 0.83,
+      "tracked_mean": 0.97,
+      "tracked_max": 1,
+      "annotated_video": "hd-smoking-2_annotated.mp4",
+      "expected": "smoking"
+    },
+    {
+      "video": "hd-smoking.mp4",
+      "device": "cuda",
+      "frames": 300,
+      "processing_fps": 24.0,
+      "people": 7,
+      "events": 9,
+      "by_label": {
+        "smoking": {
+          "events": 9,
+          "seconds": 14.9
+        }
+      },
+      "labels_shown": {
+        "smoking": 1.0
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.32,
+        "smoking": 1.2
+      },
+      "label_changes_per_10s": 0.83,
+      "tracked_mean": 1.26,
+      "tracked_max": 3,
+      "annotated_video": "hd-smoking_annotated.mp4",
+      "expected": "smoking"
+    },
+    {
+      "video": "hd-swimming-2.mp4",
+      "device": "cuda",
+      "frames": 300,
+      "processing_fps": 24.0,
+      "people": 1,
+      "events": 6,
+      "by_label": {
+        "swimming": {
+          "events": 5,
+          "seconds": 6.3
+        },
+        "sitting": {
+          "events": 1,
+          "seconds": 3.3
+        }
+      },
+      "labels_shown": {
+        "swimming": 0.665,
+        "sitting": 0.335
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.32,
+        "sitting": 2.2,
+        "swimming": 5.32
+      },
+      "label_changes_per_10s": 3.33,
+      "tracked_mean": 0.82,
+      "tracked_max": 1,
+      "annotated_video": "hd-swimming-2_annotated.mp4",
+      "expected": "swimming"
+    },
+    {
+      "video": "hd-swimming-3.mp4",
+      "device": "cuda",
+      "frames": 300,
+      "processing_fps": 24.0,
+      "people": 6,
+      "events": 7,
+      "by_label": {
+        "standing": {
+          "events": 4,
+          "seconds": 1.0
+        },
+        "swimming": {
+          "events": 1,
+          "seconds": 0.2
+        },
+        "running": {
+          "events": 2,
+          "seconds": 0.1
+        }
+      },
+      "labels_shown": {
+        "standing": 0.781,
+        "swimming": 0.156,
+        "running": 0.062
+      },
+      "first_seen_s": {
+        "detecting\u2026": 1.24,
+        "running": 1.44,
+        "standing": 2.2,
+        "swimming": 4.8
+      },
+      "label_changes_per_10s": 6.67,
+      "tracked_mean": 0.21,
+      "tracked_max": 1,
+      "annotated_video": "hd-swimming-3_annotated.mp4",
+      "expected": "swimming"
+    },
+    {
+      "video": "hd-swimming.mp4",
+      "device": "cuda",
+      "frames": 300,
+      "processing_fps": 23.9,
+      "people": 8,
+      "events": 18,
+      "by_label": {
+        "swimming": {
+          "events": 10,
+          "seconds": 2.4
+        },
+        "standing": {
+          "events": 6,
+          "seconds": 1.2
+        },
+        "sitting": {
+          "events": 1,
+          "seconds": 0.2
+        },
+        "running": {
+          "events": 1,
+          "seconds": 0.1
+        }
+      },
+      "labels_shown": {
+        "swimming": 0.634,
+        "standing": 0.312,
+        "sitting": 0.032,
+        "running": 0.022
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.72,
+        "standing": 1.0,
+        "running": 1.76,
+        "sitting": 6.36,
+        "swimming": 7.84
+      },
+      "label_changes_per_10s": 8.33,
+      "tracked_mean": 0.39,
+      "tracked_max": 2,
+      "annotated_video": "hd-swimming_annotated.mp4",
+      "expected": "swimming"
+    },
+    {
+      "video": "office-people.mp4",
+      "device": "cuda",
+      "frames": 144,
+      "processing_fps": 11.9,
+      "people": 2,
+      "events": 2,
+      "by_label": {
+        "running": {
+          "events": 2,
+          "seconds": 4.2
+        }
+      },
+      "labels_shown": {
+        "running": 1.0
+      },
+      "first_seen_s": {
+        "detecting\u2026": 1.5,
+        "running": 2.08
+      },
+      "label_changes_per_10s": 1.67,
+      "tracked_mean": 0.42,
+      "tracked_max": 1,
+      "annotated_video": "office-people_annotated.mp4",
+      "expected": null
+    },
+    {
+      "video": "store-aisle.mp4",
+      "device": "cuda",
+      "frames": 719,
+      "processing_fps": 56.6,
+      "people": 2,
+      "events": 7,
+      "by_label": {
+        "standing": {
+          "events": 3,
+          "seconds": 2.9
+        },
+        "running": {
+          "events": 2,
+          "seconds": 1.2
+        },
+        "sitting": {
+          "events": 2,
+          "seconds": 1.1
+        }
+      },
+      "labels_shown": {
+        "standing": 0.546,
+        "running": 0.235,
+        "sitting": 0.218
+      },
+      "first_seen_s": {
+        "detecting\u2026": 7.11,
+        "standing": 7.39,
+        "running": 10.01,
+        "sitting": 10.96
+      },
+      "label_changes_per_10s": 5.0,
+      "tracked_mean": 0.44,
+      "tracked_max": 2,
+      "annotated_video": "store-aisle_annotated.mp4",
+      "expected": null
+    },
+    {
+      "video": "street-surveillance.avi",
+      "device": "cuda",
+      "frames": 120,
+      "processing_fps": 9.8,
+      "people": 10,
+      "events": 15,
+      "by_label": {
+        "running": {
+          "events": 10,
+          "seconds": 20.5
+        },
+        "walking": {
+          "events": 4,
+          "seconds": 4.0
+        },
+        "standing": {
+          "events": 1,
+          "seconds": 0.2
+        }
+      },
+      "labels_shown": {
+        "running": 0.834,
+        "walking": 0.162,
+        "standing": 0.004
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.7,
+        "running": 1.1,
+        "walking": 3.0,
+        "standing": 11.9
+      },
+      "label_changes_per_10s": 12.5,
+      "tracked_mean": 2.25,
+      "tracked_max": 4,
+      "annotated_video": "street-surveillance_annotated.mp4",
+      "expected": null
+    }
+  ],
+  "compare": [
+    "hd-swimming",
+    "hd-dancing",
+    "hd-cooking",
+    "hd-eating",
+    "hd-drinking",
+    "hd-smoking-2",
+    "demo-cleaning-mopping",
+    "demo-using-computer",
+    "demo-writing",
+    "street-surveillance"
+  ],
+  "before": [
+    {
+      "video": "demo-basic-run.avi",
+      "device": "cpu",
+      "frames": 360,
+      "processing_fps": 23.8,
+      "people": 3,
+      "events": 5,
+      "by_label": {
+        "standing": {
+          "events": 4,
+          "seconds": 12.8
+        },
+        "exercising": {
+          "events": 1,
+          "seconds": 1.3
+        }
+      },
+      "labels_shown": {
+        "standing": 0.907,
+        "exercising": 0.093
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.7,
+        "standing": 3.27,
+        "exercising": 4.2
+      },
+      "label_changes_per_10s": 4.17,
+      "tracked_mean": 1.43,
+      "tracked_max": 2,
+      "annotated_video": "demo-basic-run_annotated.mp4",
+      "expected": "running"
+    },
+    {
+      "video": "demo-basic-sit.avi",
+      "device": "cpu",
+      "frames": 360,
+      "processing_fps": 23.1,
+      "people": 3,
+      "events": 5,
+      "by_label": {
+        "sitting": {
+          "events": 4,
+          "seconds": 33.2
+        },
+        "standing": {
+          "events": 1,
+          "seconds": 3.1
+        }
+      },
+      "labels_shown": {
+        "sitting": 0.915,
+        "standing": 0.085
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.33,
+        "sitting": 0.6,
+        "standing": 9.67
+      },
+      "label_changes_per_10s": 3.33,
+      "tracked_mean": 2.55,
+      "tracked_max": 3,
+      "annotated_video": "demo-basic-sit_annotated.mp4",
+      "expected": "sitting"
+    },
+    {
+      "video": "demo-basic-walk.avi",
+      "device": "cpu",
+      "frames": 360,
+      "processing_fps": 24.3,
+      "people": 0,
+      "events": 0,
+      "by_label": {},
+      "labels_shown": {},
+      "first_seen_s": {
+        "detecting\u2026": 3.57
+      },
+      "label_changes_per_10s": 0.0,
+      "tracked_mean": 0.03,
+      "tracked_max": 1,
+      "annotated_video": "demo-basic-walk_annotated.mp4",
+      "expected": "walking"
+    },
+    {
+      "video": "demo-brushing-teeth.mp4",
+      "device": "cpu",
+      "frames": 300,
+      "processing_fps": 3.9,
+      "people": 1,
+      "events": 1,
+      "by_label": {
+        "sitting": {
+          "events": 1,
+          "seconds": 3.1
+        }
+      },
+      "labels_shown": {
+        "sitting": 1.0
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.24,
+        "sitting": 1.08
+      },
+      "label_changes_per_10s": 1.67,
+      "tracked_mean": 0.98,
+      "tracked_max": 1,
+      "annotated_video": "demo-brushing-teeth_annotated.mp4",
+      "expected": "brushing teeth"
+    },
+    {
+      "video": "demo-cleaning-mopping.avi",
+      "device": "cpu",
+      "frames": 300,
+      "processing_fps": 20.2,
+      "people": 1,
+      "events": 1,
+      "by_label": {
+        "standing": {
+          "events": 1,
+          "seconds": 14.1
+        }
+      },
+      "labels_shown": {
+        "standing": 1.0
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.32,
+        "standing": 0.68
+      },
+      "label_changes_per_10s": 0.83,
+      "tracked_mean": 0.97,
+      "tracked_max": 1,
+      "annotated_video": "demo-cleaning-mopping_annotated.mp4",
+      "expected": "cleaning"
+    },
+    {
+      "video": "demo-cooking.mp4",
+      "device": "cpu",
+      "frames": 287,
+      "processing_fps": 15.4,
+      "people": 1,
+      "events": 1,
+      "by_label": {
+        "standing": {
+          "events": 1,
+          "seconds": 8.0
+        }
+      },
+      "labels_shown": {
+        "standing": 1.0
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.38,
+        "standing": 2.17
+      },
+      "label_changes_per_10s": 1.67,
+      "tracked_mean": 0.7,
+      "tracked_max": 1,
+      "annotated_video": "demo-cooking_annotated.mp4",
+      "expected": "cooking"
+    },
+    {
+      "video": "demo-cycling.avi",
+      "device": "cpu",
+      "frames": 359,
+      "processing_fps": 21.6,
+      "people": 0,
+      "events": 0,
+      "by_label": {},
+      "labels_shown": {},
+      "first_seen_s": {
+        "detecting\u2026": 0.53
+      },
+      "label_changes_per_10s": 0.0,
+      "tracked_mean": 0.06,
+      "tracked_max": 1,
+      "annotated_video": "demo-cycling_annotated.mp4",
+      "expected": "cycling"
+    },
+    {
+      "video": "demo-drinking.mp4",
+      "device": "cpu",
+      "frames": 287,
+      "processing_fps": 14.9,
+      "people": 1,
+      "events": 1,
+      "by_label": {
+        "sitting": {
+          "events": 1,
+          "seconds": 18.1
+        }
+      },
+      "labels_shown": {
+        "sitting": 1.0
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.54,
+        "sitting": 0.83
+      },
+      "label_changes_per_10s": 0.84,
+      "tracked_mean": 0.95,
+      "tracked_max": 1,
+      "annotated_video": "demo-drinking_annotated.mp4",
+      "expected": "drinking"
+    },
+    {
+      "video": "demo-eating.avi",
+      "device": "cpu",
+      "frames": 360,
+      "processing_fps": 19.0,
+      "people": 0,
+      "events": 0,
+      "by_label": {},
+      "labels_shown": {},
+      "first_seen_s": {
+        "detecting\u2026": 0.4
+      },
+      "label_changes_per_10s": 0.0,
+      "tracked_mean": 1.9,
+      "tracked_max": 2,
+      "annotated_video": "demo-eating_annotated.mp4",
+      "expected": "eating"
+    },
+    {
+      "video": "demo-exercising-pullup.avi",
+      "device": "cpu",
+      "frames": 359,
+      "processing_fps": 22.3,
+      "people": 1,
+      "events": 1,
+      "by_label": {
+        "standing": {
+          "events": 1,
+          "seconds": 15.3
+        }
+      },
+      "labels_shown": {
+        "standing": 1.0
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.37,
+        "standing": 0.67
+      },
+      "label_changes_per_10s": 0.83,
+      "tracked_mean": 0.97,
+      "tracked_max": 1,
+      "annotated_video": "demo-exercising-pullup_annotated.mp4",
+      "expected": "exercising"
+    },
+    {
+      "video": "demo-exercising-pushup.avi",
+      "device": "cpu",
+      "frames": 300,
+      "processing_fps": 20.7,
+      "people": 1,
+      "events": 3,
+      "by_label": {
+        "standing": {
+          "events": 2,
+          "seconds": 1.1
+        },
+        "exercising": {
+          "events": 1,
+          "seconds": 0.4
+        }
+      },
+      "labels_shown": {
+        "standing": 0.697,
+        "exercising": 0.303
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.36,
+        "standing": 0.68,
+        "exercising": 2.12
+      },
+      "label_changes_per_10s": 4.17,
+      "tracked_mean": 0.72,
+      "tracked_max": 1,
+      "annotated_video": "demo-exercising-pushup_annotated.mp4",
+      "expected": "exercising"
+    },
+    {
+      "video": "demo-exercising-squats.avi",
+      "device": "cpu",
+      "frames": 300,
+      "processing_fps": 19.4,
+      "people": 1,
+      "events": 4,
+      "by_label": {
+        "standing": {
+          "events": 1,
+          "seconds": 8.6
+        },
+        "walking": {
+          "events": 1,
+          "seconds": 2.8
+        },
+        "sitting": {
+          "events": 2,
+          "seconds": 1.1
+        }
+      },
+      "labels_shown": {
+        "standing": 0.679,
+        "walking": 0.219,
+        "sitting": 0.101
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.8,
+        "sitting": 1.52,
+        "standing": 3.48,
+        "walking": 9.92
+      },
+      "label_changes_per_10s": 5.0,
+      "tracked_mean": 0.93,
+      "tracked_max": 1,
+      "annotated_video": "demo-exercising-squats_annotated.mp4",
+      "expected": "exercising"
+    },
+    {
+      "video": "demo-smoking.mp4",
+      "device": "cpu",
+      "frames": 287,
+      "processing_fps": 15.1,
+      "people": 1,
+      "events": 1,
+      "by_label": {
+        "sitting": {
+          "events": 1,
+          "seconds": 18.3
+        }
+      },
+      "labels_shown": {
+        "sitting": 1.0
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.25,
+        "sitting": 0.58
+      },
+      "label_changes_per_10s": 0.84,
+      "tracked_mean": 0.98,
+      "tracked_max": 1,
+      "annotated_video": "demo-smoking_annotated.mp4",
+      "expected": "smoking"
+    },
+    {
+      "video": "demo-using-computer.avi",
+      "device": "cpu",
+      "frames": 300,
+      "processing_fps": 20.3,
+      "people": 1,
+      "events": 1,
+      "by_label": {
+        "sitting": {
+          "events": 1,
+          "seconds": 10.8
+        }
+      },
+      "labels_shown": {
+        "sitting": 1.0
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.84,
+        "sitting": 3.4
+      },
+      "label_changes_per_10s": 0.83,
+      "tracked_mean": 0.93,
+      "tracked_max": 1,
+      "annotated_video": "demo-using-computer_annotated.mp4",
+      "expected": "using computer"
+    },
+    {
+      "video": "demo-writing.avi",
+      "device": "cpu",
+      "frames": 300,
+      "processing_fps": 20.2,
+      "people": 1,
+      "events": 1,
+      "by_label": {
+        "standing": {
+          "events": 1,
+          "seconds": 13.7
+        }
+      },
+      "labels_shown": {
+        "standing": 1.0
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.64,
+        "standing": 1.08
+      },
+      "label_changes_per_10s": 0.83,
+      "tracked_mean": 0.95,
+      "tracked_max": 1,
+      "annotated_video": "demo-writing_annotated.mp4",
+      "expected": "writing"
+    },
+    {
+      "video": "hd-cooking.mp4",
+      "device": "cpu",
+      "frames": 300,
+      "processing_fps": 16.8,
+      "people": 1,
+      "events": 1,
+      "by_label": {
+        "standing": {
+          "events": 1,
+          "seconds": 6.8
+        }
+      },
+      "labels_shown": {
+        "standing": 1.0
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.28,
+        "standing": 1.96
+      },
+      "label_changes_per_10s": 1.67,
+      "tracked_mean": 0.98,
+      "tracked_max": 1,
+      "annotated_video": "hd-cooking_annotated.mp4",
+      "expected": "cooking"
+    },
+    {
+      "video": "hd-dancing-2.mp4",
+      "device": "cpu",
+      "frames": 300,
+      "processing_fps": 12.7,
+      "people": 1,
+      "events": 1,
+      "by_label": {
+        "standing": {
+          "events": 1,
+          "seconds": 17.4
+        }
+      },
+      "labels_shown": {
+        "standing": 1.0
+      },
+      "first_seen_s": {
+        "detecting\u2026": 1.6,
+        "standing": 3.76
+      },
+      "label_changes_per_10s": 0.83,
+      "tracked_mean": 0.87,
+      "tracked_max": 1,
+      "annotated_video": "hd-dancing-2_annotated.mp4",
+      "expected": "dancing"
+    },
+    {
+      "video": "hd-dancing-3.mp4",
+      "device": "cpu",
+      "frames": 300,
+      "processing_fps": 13.2,
+      "people": 8,
+      "events": 13,
+      "by_label": {
+        "standing": {
+          "events": 9,
+          "seconds": 45.9
+        },
+        "sitting": {
+          "events": 4,
+          "seconds": 13.6
+        }
+      },
+      "labels_shown": {
+        "standing": 0.772,
+        "sitting": 0.228
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.6,
+        "standing": 1.4,
+        "sitting": 3.56
+      },
+      "label_changes_per_10s": 13.33,
+      "tracked_mean": 5.05,
+      "tracked_max": 8,
+      "annotated_video": "hd-dancing-3_annotated.mp4",
+      "expected": "dancing"
+    },
+    {
+      "video": "hd-dancing-4.mp4",
+      "device": "cpu",
+      "frames": 300,
+      "processing_fps": 14.3,
+      "people": 3,
+      "events": 4,
+      "by_label": {
+        "standing": {
+          "events": 4,
+          "seconds": 27.0
+        }
+      },
+      "labels_shown": {
+        "standing": 1.0
+      },
+      "first_seen_s": {
+        "detecting\u2026": 1.2,
+        "standing": 3.16
+      },
+      "label_changes_per_10s": 2.5,
+      "tracked_mean": 3.48,
+      "tracked_max": 5,
+      "annotated_video": "hd-dancing-4_annotated.mp4",
+      "expected": "dancing"
+    },
+    {
+      "video": "hd-dancing.mp4",
+      "device": "cpu",
+      "frames": 300,
+      "processing_fps": 13.6,
+      "people": 1,
+      "events": 1,
+      "by_label": {
+        "standing": {
+          "events": 1,
+          "seconds": 3.3
+        }
+      },
+      "labels_shown": {
+        "standing": 1.0
+      },
+      "first_seen_s": {
+        "detecting\u2026": 1.52,
+        "standing": 3.0
+      },
+      "label_changes_per_10s": 1.67,
+      "tracked_mean": 0.87,
+      "tracked_max": 1,
+      "annotated_video": "hd-dancing_annotated.mp4",
+      "expected": "dancing"
+    },
+    {
+      "video": "hd-drinking-2.mp4",
+      "device": "cpu",
+      "frames": 300,
+      "processing_fps": 16.9,
+      "people": 1,
+      "events": 1,
+      "by_label": {
+        "sitting": {
+          "events": 1,
+          "seconds": 13.3
+        }
+      },
+      "labels_shown": {
+        "sitting": 1.0
+      },
+      "first_seen_s": {
+        "detecting\u2026": 0.8,
+        "sitting": 2.88
+      },
+      "label_changes_per_10s": 1.67,
+      "tracked_mean": 0.93,
+      "tracked_max": 1,
+      "annotated_video": "hd-drinking-2_annotated.mp4",
+      "expected": "drinking"
+    },
+    {
+      "video": "hd-drinking.mp4",
+      "device": "cpu",
+      "frames": 359,
+      "processing_fps": 22.9,
+      "people": 1,
+      "events": 1,
+      "by_label": {
+        "standing": {
+          "events": 1,
+          "seconds": 5.8
+        }
+      },
+      "labels_shown": {
+        "standing": 1.0
+      },
+      "first_seen_s": {
+        "detecting\u2026": 1.1,
+        "standing": 7.81
+      },
+      "label_changes_per_10s": 0.83,
+      "tracked_mean": 0.91,
+      "tracked_max": 1,
+      "annotated_video": "hd-drinking_annotated.mp4",
+      "expected": "drinking"
+    },
+    {
+      "video": "hd-eating-2.mp4",
+      "device": "cpu",
+      "frames": 359,
+      "processing_fps": 17.5,
+      "people": 0,
+      "events": 0,
+      "by_label": {},
+      "labels_shown": {},
+      "first_seen_s": {
+        "detecting\u2026": 2.6
+      },
+      "label_changes_per_10s": 0.0,
+      "tracked_mean": 0.3,
+      "tracked_max": 1,
+      "annotated_video": "hd-eating-2_annotated.mp4",
+      "expected": "eating"
+    },
+    {
+      "video": "hd-eating.mp4",
+      "device": "cpu",
+      "frames": 300,
+      "processing_fps": 14.8,
+      "people": 1,
+      "events": 1,
+      "by_label": {
+        "sitting": {
+          "events": 1,
+          "seconds": 7.8
+        }
+      },
+      "labels_shown": {
+        "sitting": 1.0
+      },
+      "first_seen_s": {
+        "detecting\u2026": 2.8,
+        "sitting": 4.16
+      },
+      "label_changes_per_10s": 1.67,
+      "tracked_mean": 0.77,
+      "tracked_max": 1,
+      "annotated_video": "hd-eating_annotated.mp4",
+      "expected": "eating"
+    },
+    {
+      "video": "hd-smoking-2.mp4",
+      "device": "cpu",
+      "frames": 300,
+      "processing_fps": 10.4,
+      "people": 0,
+      "events": 0,
+      "by_label": {},
+      "labels_shown": {},
+      "first_seen_s": {
+        "detecting\u2026": 1.08
+      },
+      "label_changes_per_10s": 0.0,
+      "tracked_mean": 0.91,
+      "tracked_max": 1,
+      "annotated_video": "hd-smoking-2_annotated.mp4",
+      "expected": "smoking"
+    },
+    {
+      "video": "hd-smoking.mp4",
+      "device": "cpu",
+      "frames": 300,
+      "processing_fps": 18.1,
+      "people": 0,
+      "events": 0,
+      "by_label": {},
+      "labels_shown": {},
+      "first_seen_s": {
+        "detecting\u2026": 0.68
+      },
+      "label_changes_per_10s": 0.0,
+      "tracked_mean": 0.84,
+      "tracked_max": 1,
+      "annotated_video": "hd-smoking_annotated.mp4",
+      "expected": "smoking"
+    },
+    {
+      "video": "hd-swimming-2.mp4",
+      "device": "cpu",
+      "frames": 300,
+      "processing_fps": 18.5,
+      "people": 0,
+      "events": 0,
+      "by_label": {},
+      "labels_shown": {},
+      "first_seen_s": {
+        "detecting\u2026": 1.4
+      },
+      "label_changes_per_10s": 0.0,
+      "tracked_mean": 0.15,
+      "tracked_max": 1,
+      "annotated_video": "hd-swimming-2_annotated.mp4",
+      "expected": "swimming"
+    },
+    {
+      "video": "hd-swimming-3.mp4",
+      "device": "cpu",
+      "frames": 300,
+      "processing_fps": 16.0,
+      "people": 0,
+      "events": 0,
+      "by_label": {},
+      "labels_shown": {},
+      "first_seen_s": {},
+      "label_changes_per_10s": 0.0,
+      "tracked_mean": 0.0,
+      "tracked_max": 0,
+      "annotated_video": "hd-swimming-3_annotated.mp4",
+      "expected": "swimming"
+    },
+    {
+      "video": "hd-swimming.mp4",
+      "device": "cpu",
+      "frames": 300,
+      "processing_fps": 15.6,
+      "people": 0,
+      "events": 0,
+      "by_label": {},
+      "labels_shown": {},
+      "first_seen_s": {},
+      "label_changes_per_10s": 0.0,
+      "tracked_mean": 0.0,
+      "tracked_max": 0,
+      "annotated_video": "hd-swimming_annotated.mp4",
+      "expected": "swimming"
+    },
+    {
+      "video": "street-surveillance.avi",
+      "device": "cpu",
+      "frames": 120,
+      "processing_fps": 8.5,
+      "people": 0,
+      "events": 0,
+      "by_label": {},
+      "labels_shown": {},
+      "first_seen_s": {},
+      "label_changes_per_10s": 0.0,
+      "tracked_mean": 0.0,
+      "tracked_max": 0,
+      "annotated_video": "street-surveillance_annotated.mp4",
+      "expected": null
+    }
+  ],
+  "compare_left": {
+    "tag": "WITHOUT GPU",
+    "sub": "laptop CPU"
+  },
+  "compare_right": {
+    "tag": "WITH GPU",
+    "sub": "Tesla T4"
+  },
+  "compare_title": "Without a GPU vs with a GPU: same clips, same software",
+  "compare_points": [
+    "<b>Identical software and models on both sides</b>: the VideoMAE activity model (87M parameters, a look every 0.4 s), the YOLOv8s pose detector, and the vision-language model that writes the detailed subtitles.",
+    "<b>Without GPU</b>: this laptop's CPU (Intel(R) Core(TM) Ultra 5 125H) cannot run them in real time, so labels arrive late or not at all and subtitles stay basic.",
+    "<b>With GPU</b> (Tesla T4): the same models keep up with the video.",
+    "Same clips, 12 seconds each; every figure is what the screen showed."
+  ]
+}

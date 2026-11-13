@@ -1,0 +1,100 @@
+# Model wiring. Swap values here to change models — no code changes required.
+# Rationale for each choice lives in docs/MODEL_SELECTION.md.
+
+model:
+  # --- Person detection + pose in ONE pass ---
+  # YOLOv8n-pose: 3.3M params, detection + 17 COCO keypoints per person per
+  # frame, ~10 ms on GPU / ~40 ms on CPU. Whole-frame pose is far more accurate
+  # than per-crop MediaPipe on small / distant people (surveillance angles).
+  # Plain YOLOv8n detection has the best recall on tiny / distant people
+  # (surveillance angles). Pose variants (yolov8n-pose.pt) miss small ones due
+  # to COCO-Person training bias. The classifier falls back cleanly to
+  # bbox-motion-only when no pose is available.
+  # MUST be a *-pose model. The pose rule engine (sitting, drinking, waving,
+  # clapping, reading, push-up, crawling, bending...) needs keypoints; a plain
+  # detector returns none and every one of those rules silently dies, leaving
+  # only motion labels. That exact regression happened once — see the
+  # pose-capability warning in src/tracking/person_tracker.py.
+  detector_weights: yolov8n-pose.pt
+  detector_conf: 0.25
+  detector_iou: 0.5
+
+  # --- Tracking ---
+  # ByteTrack ships with ultralytics; robust to short occlusions, no ReID cost.
+  tracker: bytetrack.yaml
+
+  # --- Pose (feeds skeleton-based action classifier) ---
+  # MediaPipe Pose (Lite): 33 landmarks, CPU-friendly, ~5 ms/person.
+  pose_model: mediapipe_pose_lite
+
+  # --- Action classifier ---
+  #   'videomae'  : pretrained Kinetics-400 model (~350 MB, 400 real activities
+  #                 including cooking / reading / sleeping / dancing / etc.)
+  #   'st_gcn_kinetics' : pose-based ST-GCN if weights present, else heuristic
+  #   'heuristic' : zero-dependency motion + posture baseline (walk / sit / …)
+  action_classifier: videomae
+  action_window: 16          # both deep backends require exactly 16 frames
+  action_stride: 16          # run inference every N frames per person
+
+  # Deep backend. Both are Kinetics-400 pretrained, so the restricted target
+  # vocabulary applies to either. Measured on CPU (14 threads):
+  #   s3d       8.3M params   ~310 ms/clip   <- default
+  #   videomae  86.5M params  ~2260 ms/clip  (7x slower; higher per-clip acc)
+  # s3d wins in practice: consensus voting needs several predictions, and 7x
+  # more predictions per second beats a better single prediction.
+  deep_backend: s3d
+
+  # YOLO input resolution — runs on EVERY frame, so it sets the video FPS
+  # ceiling. Measured: 640 -> 77ms (13fps), 512 -> 49ms (20fps),
+  # 416 -> 38ms (26fps), 320 -> 29ms (35fps).
+  detector_imgsz: 416
+
+  # Minimum gap between deep inferences, across all people. This is the
+  # main speed/responsiveness dial on CPU: inference and the tracker
+  # contend for the same cores, so pacing inference protects video FPS.
+  # Lower = fresher labels, choppier video. Higher = smoother video,
+  # slower label updates. Irrelevant on GPU.
+  deep_min_interval_s: 1.5
+
+  # Caption under the video naming the activity and the place ("A person is
+  # cooking in a kitchen."). The place comes from CLIP, read from the local
+  # Hugging Face cache only; false = caption without the place.
+  scene_description: true
+  action_labels:
+    - standing
+    - sitting
+    - walking
+    - running
+    - falling
+    - bending
+    - lying
+    - picking_up
+
+# Used automatically when an NVIDIA GPU is available (DEVICE=auto, the
+# default). The CPU values above stay in force on machines without one.
+gpu:
+  deep_min_interval_s: 0.4   # activity model looks ~2.5x a second (CPU: every 1.5 s)
+  detector_imgsz: 640        # full-resolution person detection (CPU: 416)
+  detector_half: true        # FP16 detector: ~2x faster on T4 / RTX, same boxes
+  # 960 px detection for HD video (>= 720 px wide), and only while the people
+  # in view are small: it finds distant people (street scene 1.3 -> 3.0 per
+  # frame) but slices close-ups into phantom people (kitchen 1.0 -> 2.4).
+  # The switching rule is in src/tracking/person_tracker.py.
+  detector_imgsz_hd: 960
+  # Activity model. VideoMAE (87M params) vs the CPU's S3D (8M), measured on
+  # a T4 over the 15 demo clips (scripts: kaggle/gpu_benchmark.py, 2026-11-05):
+  #   clearly correct 13/15 vs 9/15; correct on screen 65% vs 47%;
+  #   correct label after 2.1 s vs 5.3 s (median); smoking 92% vs 10%.
+  deep_backend: videomae
+  # Detailed, scene-aware subtitles written by a small vision-language model
+  # (SmolVLM2-500M) from the video frames, grounded in what the system
+  # detected. About a second per sentence on a T4; ~100 s on a laptop CPU,
+  # so GPU only. Falls back to the template subtitles if unavailable.
+  vlm_captions: true
+  # Larger pose detector on GPU (11.6M params vs 3.3M; detection ~15 ms/frame
+  # on a T4 including tracking). Measured on a T4, 2026-11-04:
+  #   live dashboard (scripts/live_accuracy.py)          15/15, labels in 0.5-2.3 s
+  #   offline harness, first 120 frames, --realtime      yolov8s 11/15 vs yolov8n 10/15
+  # Bundled in models/; if it is ever missing and cannot be downloaded, the
+  # nano model above is used automatically.
+  detector_weights: yolov8s-pose.pt

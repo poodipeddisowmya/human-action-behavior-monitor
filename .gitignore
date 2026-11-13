@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+
+# Secrets and local settings (copy .env.example to .env)
+.env
+
+# Runtime output
+logs/
+runs/
+*.db
+*.sqlite3
+
+# Build outputs and packaged zips (rebuild with scripts/package_for_kaggle.py)
+dist/
+backups/
+
+# Frontend: dependencies only. ui/dist (the built dashboard) IS tracked so the
+# app runs without Node installed.
+ui/node_modules/
+ui/.vite/
+ui/tsconfig.tsbuildinfo
+
+# Raw footage, kept out of the repo (large; re-download from SOURCES.md)
+data/datasets/*
+!data/datasets/.gitkeep
+data/candidates/
+data/downloads/**/*.mp4
+
+# Personal phone recordings and client-supplied footage stay local
+data/samples/WhatsApp_*
+data/samples/client_sample_video.mp4
+
+# Office documents (business reports, not source)
+*.docx
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

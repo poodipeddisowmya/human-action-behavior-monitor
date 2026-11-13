@@ -1,0 +1,29 @@
+# GPU deployment:   docker compose up -d --build
+# Then open http://<server>:8000/?token=<ACCESS_TOKEN>
+services:
+  monitor:
+    build: .
+    image: human-action-monitor:1.0.0
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      ACCESS_TOKEN: ${ACCESS_TOKEN:?set ACCESS_TOKEN in .env or the shell}
+      DEVICE: auto
+      TARGET_FPS: "15"
+      STREAM_MAX_WIDTH: "1280"
+    volumes:
+      # Event database + logs, and uploaded clips, survive container rebuilds.
+      - monitor-logs:/app/logs
+      - monitor-uploads:/app/data/samples
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  monitor-logs:
+  monitor-uploads:

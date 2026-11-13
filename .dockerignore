@@ -1,0 +1,15 @@
+.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.env
+logs
+backups
+runs
+dist
+ui/node_modules
+ui/src
+data/datasets
+data/candidates
+data/samples/WhatsApp_*
+*.docx
