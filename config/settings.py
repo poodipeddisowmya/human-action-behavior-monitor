@@ -80,10 +80,25 @@ class ModelConfig(BaseModel):
     # only added noise (one clip read "falling"), hence the width gate.
     detector_imgsz_hd: int = 0
     detector_hd_min_width: int = 720
+    # Jetson profile (the `jetson:` section of model_config.yaml); all off
+    # elsewhere, so the CPU and T4 behaviour is unchanged.
+    #   detector_engine  run the pose detector from its TensorRT engine
+    #                    (models/<weights>.engine, built by
+    #                    scripts/build_trt_engines.py) when one exists
+    #   deep_half        VideoMAE in FP16
+    #   clip_half        CLIP loaded in FP16 (half the memory, same speed)
+    detector_engine: bool = False
+    deep_half: bool = False
+    clip_half: bool = False
 
 
 def _env_bool(name: str, default: bool = False) -> bool:
     return os.getenv(name, str(default)).split("#")[0].strip().lower() in ("1", "true", "yes", "on")
+
+
+def is_jetson() -> bool:
+    """An NVIDIA Jetson (integrated GPU sharing the CPU's memory)."""
+    return Path("/etc/nv_tegra_release").exists()
 
 
 def _resolve_device(choice: str) -> str:
@@ -105,7 +120,13 @@ def _resolve_device(choice: str) -> str:
             # that case falls back to the CPU with a clear message instead.
             dev = choice if choice.startswith("cuda") else "cuda"
             (torch.ones(8, device=dev) * 2).sum().item()
-            torch.backends.cudnn.benchmark = True       # fixed input sizes
+            # Autotune (fixed input sizes) everywhere except on a Jetson. Its
+            # memory is shared with the CPU and NVML does not exist there, so
+            # when the autotuner tries a 3D-conv algorithm whose workspace
+            # does not fit, PyTorch raises "NVML_SUCCESS == r INTERNAL ASSERT
+            # FAILED" instead of skipping it: S3D/VideoMAE fail on their first
+            # look. Measured on an Orin Nano: S3D 76 ms/look with it off.
+            torch.backends.cudnn.benchmark = not is_jetson()
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.backends.cudnn.allow_tf32 = True
             return dev
@@ -182,6 +203,11 @@ def _load() -> Settings:
         if gpu.get("detector_weights"):
             s.model.detector_fallback_weights = s.model.detector_weights
             s.model.detector_weights = str(gpu["detector_weights"])
+        # A Jetson runs the GPU profile above plus its own tuning, unless
+        # JETSON_OPTIMISED=0 (to reproduce the T4's exact configuration).
+        if is_jetson() and _env_bool("JETSON_OPTIMISED", True):
+            for key, value in (raw.get("jetson", {}) or {}).items():
+                setattr(s.model, key, value)
     # Operator overrides without editing YAML (Docker / Kaggle).
     if os.getenv("DETECTOR_WEIGHTS"):
         s.model.detector_weights = os.environ["DETECTOR_WEIGHTS"].strip()
@@ -197,6 +223,9 @@ def _load() -> Settings:
         s.model.deep_backend = os.environ["DEEP_BACKEND"].strip().lower()
     if os.getenv("VLM_CAPTIONS"):
         s.model.vlm_captions = _env_bool("VLM_CAPTIONS")
+    for flag in ("DETECTOR_ENGINE", "DEEP_HALF", "CLIP_HALF"):
+        if os.getenv(flag):
+            setattr(s.model, flag.lower(), _env_bool(flag))
     if os.getenv("LABEL_MIN_DWELL_S"):
         s.model.label_min_dwell_s = float(os.environ["LABEL_MIN_DWELL_S"])
     return s
