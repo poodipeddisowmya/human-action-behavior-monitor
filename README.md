@@ -9,7 +9,8 @@ webcam — the server's own, or the viewer's own browser webcam.
 **GPU:**
 [Client demo on Kaggle's free GPU](docs/KAGGLE_DEMO.md) ·
 [Production deployment (Docker)](docs/DEPLOYMENT.md) ·
-[Windows GPU machine](docs/GPU_DEMO.md)
+[Windows GPU machine](docs/GPU_DEMO.md) ·
+[NVIDIA Jetson](docs/JETSON.md)
 
 ---
 

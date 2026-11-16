@@ -88,8 +88,11 @@ class PersonTracker:
         chosen = weights or settings.model.detector_weights
         path = fetch_weights(chosen, getattr(settings.model, "detector_fallback_weights", None))
         chosen = Path(path).name
+        if getattr(settings.model, "detector_engine", False):
+            path = self._engine_for(path)
+            chosen = Path(path).name
         self.weights_name = chosen
-        self._model = YOLO(path)
+        self._model = YOLO(path, task="pose" if "pose" in chosen else None)
         self._device = device or settings.device
         self._half = str(self._device).startswith("cuda") and getattr(
             settings.model, "detector_half", False)
@@ -114,6 +117,38 @@ class PersonTracker:
                 f"config/model_config.yaml.\n",
                 flush=True,
             )
+
+    @staticmethod
+    def _engine_for(weights: str) -> str:
+        """The TensorRT engine built from `weights`, or `weights` if none.
+
+        Built once per device by scripts/build_trt_engines.py (an engine is
+        specific to the GPU and TensorRT version that built it, so it is not
+        shipped). It must cover the largest input size the tracker asks for.
+        """
+        engine = Path(weights).with_suffix(".engine")
+        if not engine.exists():
+            print(f"[detector] no TensorRT engine at {engine}; using {Path(weights).name} "
+                  f"(build it: python scripts/build_trt_engines.py)", flush=True)
+            return weights
+        try:
+            import json
+            import struct
+            with engine.open("rb") as f:          # ultralytics: <len><json meta><engine>
+                meta = json.loads(f.read(struct.unpack("<i", f.read(4))[0]).decode())
+            built = max(meta.get("imgsz") or [0])
+            need = max(getattr(settings.model, "detector_imgsz", 640),
+                       getattr(settings.model, "detector_imgsz_hd", 0))
+            if built < need:
+                print(f"[detector] {engine.name} covers {built} px but {need} px is "
+                      f"configured; using {Path(weights).name}", flush=True)
+                return weights
+        except Exception as e:
+            print(f"[detector] unreadable engine {engine.name} ({e}); "
+                  f"using {Path(weights).name}", flush=True)
+            return weights
+        print(f"[detector] TensorRT engine {engine.name}", flush=True)
+        return str(engine)
 
     def warmup(self) -> None:
         """One throwaway inference, so the first real frame is not the slow

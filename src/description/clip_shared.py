@@ -32,8 +32,15 @@ def get_clip():
                 os.environ.setdefault("HF_HUB_OFFLINE", "1")
                 from transformers import CLIPModel, CLIPProcessor
                 from config import settings
+                import torch
                 proc = CLIPProcessor.from_pretrained(CHECKPOINT)
-                model = CLIPModel.from_pretrained(CHECKPOINT).eval().to(settings.device)
+                # Jetson profile: FP16 weights, loaded as such so FP32 never
+                # occupies the shared CPU/GPU memory even briefly.
+                half = (getattr(settings.model, "clip_half", False)
+                        and str(settings.device).startswith("cuda"))
+                model = CLIPModel.from_pretrained(
+                    CHECKPOINT, torch_dtype=torch.float16 if half else torch.float32,
+                ).eval().to(settings.device)
                 _loaded = (model, proc, threading.Lock())
             except Exception:
                 _failed = True
@@ -64,6 +71,6 @@ def encode_images(images) -> "torch.Tensor":
     model, proc, lock = get_clip()
     device = next(model.parameters()).device
     with lock, torch.no_grad():
-        inputs = {k: v.to(device) for k, v in proc(images=images, return_tensors="pt").items()}
+        inputs = {k: v.to(device, model.dtype) for k, v in proc(images=images, return_tensors="pt").items()}
         e = _features(model.get_image_features(**inputs))
         return (e / e.norm(dim=-1, keepdim=True)).float().cpu()

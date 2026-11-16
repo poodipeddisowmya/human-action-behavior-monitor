@@ -98,3 +98,20 @@ gpu:
   # Bundled in models/; if it is ever missing and cannot be downloaded, the
   # nano model above is used automatically.
   detector_weights: yolov8s-pose.pt
+
+# NVIDIA Jetson (Orin): the gpu: profile above, plus this. Same models;
+# only how they run changes. JETSON_OPTIMISED=0 turns it off, reproducing the
+# T4's exact configuration. Measured on an Orin Nano Super (MAXN_SUPER),
+# 2026-11-16 — see docs/JETSON.md:
+#   VideoMAE look       FP32 202 ms -> FP16 75 ms
+#   pose detector       PyTorch FP16 33 ms (640 px) / 45 ms (960 px) -> TensorRT, see below
+#   CLIP                FP16 halves its 600 MB of weights; same speed
+jetson:
+  detector_engine: true   # TensorRT engine, if scripts/build_trt_engines.py built one
+  deep_half: true
+  clip_half: true
+  # SmolVLM2 subtitles do not fit in 8 GB beside a desktop session: with
+  # them on, its sentences and even person detections failed for lack of
+  # memory. Template subtitles instead; labels are unaffected. On a headless
+  # board (or a 16 GB Orin) set VLM_CAPTIONS=1.
+  vlm_captions: false
