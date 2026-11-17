@@ -820,6 +820,10 @@ class VideoMAEClassifier:
             deep_at = self._last_support_at.get(person_id, 0.0)
             fresh = deep is not None and (time.time() - deep_at) < _DISPLAY_HOLD_SECONDS
 
+            # Whether the label below is this person's own verdict or one
+            # borrowed from someone else (the handoff or the scene pool).
+            borrowed = False
+
             # The shot just flipped between single- and multi-person keying:
             # carry the confirmed label across (see _SCENE_HANDOFF_S).
             if not fresh:
@@ -832,13 +836,22 @@ class VideoMAEClassifier:
                 if (ok and held is not None
                         and (time.time() - self._last_support_at.get(other, 0.0))
                         < _DISPLAY_HOLD_SECONDS):
-                    deep, fresh = held, True
+                    deep, fresh, borrowed = held, True, not single_person
 
             # This track has no verdict of its own (usually because ByteTrack
             # just renumbered it) — inherit the scene's, if recent.
-            if not fresh and self._scene_pred is not None:
+            #
+            # With several people in view, only until the deep model has
+            # looked at THIS person. The scene pool mixes everyone's votes, so
+            # inheriting it indefinitely painted one person's activity on
+            # everybody: measured live on a webcam, three people (one just
+            # standing) all read "using phone 54%", then all "smoking". Once
+            # this person's own look is in and confirmed nothing, their own
+            # pose read is the honest answer, not a neighbour's activity.
+            if (not fresh and self._scene_pred is not None
+                    and (single_person or person_id not in self._infer_attempted)):
                 if (time.time() - self._scene_pred_at) < _DEEP_CACHE_SECONDS:
-                    deep, fresh = self._scene_pred, True
+                    deep, fresh, borrowed = self._scene_pred, True, not single_person
 
             attempted = (
                 person_id in self._infer_attempted
@@ -861,6 +874,11 @@ class VideoMAEClassifier:
         if pose_absolute:
             return heur
         if fresh and deep is not None and seated and deep.label in _SEATED_VETO:
+            return heur
+        # Someone measurably walking or running keeps that label over an
+        # activity borrowed from another person (see `borrowed` above).
+        if (borrowed and heur is not None and heur.label in _MOTION_EVIDENCE
+                and track_age >= _MOTION_MIN_UPDATES):
             return heur
         if fresh and deep is not None:
             if not pose_preferred or deep.confidence >= _CONF_STRONG:

@@ -86,6 +86,13 @@ gpu:
   #   clearly correct 13/15 vs 9/15; correct on screen 65% vs 47%;
   #   correct label after 2.1 s vs 5.3 s (median); smoking 92% vs 10%.
   deep_backend: videomae
+  # No minimum confidence per look. Tried 2026-11-17 (Jetson, 29 showcase
+  # clips) to stop weak, steady guesses pooling into a wrong label on a
+  # webcam close-up ("eating" from 0.34 looks): a 0.4 floor cost 69% -> 61%
+  # correct on screen and wrong labels stayed at 2%. Drinking and eating are
+  # recognised from consistent looks of 0.13-0.37 (hd-drinking-2 86% -> 0%,
+  # hd-eating-2 94% -> 0%), so strength alone cannot tell them from a
+  # close-up. Camera framing is the fix: see docs/JETSON.md, Live camera.
   # Detailed, scene-aware subtitles written by a small vision-language model
   # (SmolVLM2-500M) from the video frames, grounded in what the system
   # detected. About a second per sentence on a T4; ~100 s on a laptop CPU,
