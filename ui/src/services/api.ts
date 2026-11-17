@@ -77,6 +77,7 @@ export interface ShowcaseClip {
   featured: boolean;
   left: ShowcaseSide;
   right: ShowcaseSide;
+  extra?: Record<string, ShowcaseSide | null>;   // further devices, by key
 }
 export interface ShowcaseTotals {
   clear: number;
@@ -93,6 +94,8 @@ export interface Showcase {
   seconds_per_clip: number;
   labelled_clips: number;
   totals: { left: ShowcaseTotals; right: ShowcaseTotals };
+  // Further devices recorded on the same clips (scripts/add_showcase_side.py).
+  extra?: { key: string; tag: string; sub: string; short: string; recorded: string | null; totals: ShowcaseTotals }[];
   clips: ShowcaseClip[];
 }
 
@@ -108,7 +111,7 @@ export const api = {
 
   metrics: () => json<Metrics>("/api/metrics"),
   showcase: () => json<Showcase>("/api/showcase"),
-  showcaseVideo: (side: "left" | "right", file: string) =>
+  showcaseVideo: (side: string, file: string) =>
     `/api/showcase/video/${side}/${encodeURIComponent(file)}`,
   listSources: () => json<SourcesResponse>("/api/sources"),
   switchSource: async (filename: string) => {

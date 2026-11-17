@@ -37,13 +37,21 @@ def side(row: dict) -> dict:
 
 
 def summarize(data: dict) -> dict:
-    """Pairs and totals over every clip recorded on both sides."""
+    """Pairs and totals over every clip recorded on both sides.
+
+    Optional "extra_sides" (scripts/add_showcase_side.py) are further devices
+    recorded on the same clips, e.g. a Jetson: each is summarised over the
+    same labelled clips, and a clip it lacks shows as null.
+    """
     left = {Path(r["video"]).stem: r for r in data.get("before", [])}
     right = {Path(r["video"]).stem: r for r in data.get("clips", [])}
     both = [c for c in right if c in left]
     labelled = [c for c in both if right[c].get("expected")]
     b, a = [left[c] for c in labelled], [right[c] for c in labelled]
     n = len(labelled)
+    extras = [(x, {Path(r["video"]).stem: {**r, "expected": right[Path(r["video"]).stem].get("expected")}
+                   for r in x.get("clips", []) if Path(r["video"]).stem in right})
+              for x in data.get("extra_sides", [])]
 
     def totals(rows):
         # "appeared" counts clips where the correct label was shown at all; the
@@ -62,7 +70,14 @@ def summarize(data: dict) -> dict:
         "seconds_per_clip": data.get("seconds_per_clip"),
         "labelled_clips": n,
         "totals": {"left": totals(b), "right": totals(a)},
+        "extra": [{"key": x["key"], "tag": x.get("tag") or x["key"].upper(),
+                   "sub": x.get("sub") or "", "short": x.get("short") or x["key"],
+                   "recorded": x.get("recorded"),
+                   "totals": totals([rows[c] for c in labelled if c in rows])}
+                  for x, rows in extras],
         "clips": [{"name": c, "expected": right[c].get("expected"),
                    "featured": c in (data.get("compare") or []),
-                   "left": side(left[c]), "right": side(right[c])} for c in both],
+                   "left": side(left[c]), "right": side(right[c]),
+                   "extra": {x["key"]: side(rows[c]) if c in rows else None
+                             for x, rows in extras}} for c in both],
     }

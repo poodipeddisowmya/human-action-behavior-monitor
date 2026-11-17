@@ -77,6 +77,21 @@ GPU busy (tegrastats `GR3D_FREQ`) fell from 50% to 44% on average for the
 same work. The remaining per-frame cost is CPU-side Python (frame resize,
 box and keypoint decoding: 12–24 ms), which `jetson_clocks` speeds up.
 
+**Looking more often does not help.** With VideoMAE at 75 ms the GPU has
+room for more activity looks, so `deep_min_interval_s` (the gap between
+looks, 0.4 s) was tried shorter, 2026-11-17:
+
+| Gap | Looks/s, one person | FPS | 29 clips: clearly recognised | on screen | first shown (median) |
+|---|---:|---:|---:|---:|---:|
+| 0.4 s (kept) | 1.8 | 22.8 | 22/29 | 69% | 1.0 s |
+| 0.2 s | 2.1–2.2 | 22.8 | 21/29 | 70% | 1.1 s |
+| 0.1 s | 2.1–2.3 | not recorded on all 29 clips | | | |
+
+Looks/s and the 0.1 s row come from a sweep over a few clips
+(smoking, dancing, two crowd scenes). Each person submits a clip only every 8 frames, which caps the rate near
+2.2 looks/s whatever the gap; the 0.2 s run differed from 0.4 s only by
+run-to-run noise (three clips moved, in both directions).
+
 ## Jetson-specific fixes in the code
 
 | Issue | What happened | Fix |
@@ -101,3 +116,20 @@ python scripts/compare_devices.py "dist/jetson-optimised=Jetson (optimised)" \
 
 `record_showcase.py` records the same clips as `kaggle/gpu_showcase.py` and
 lists, per clip, any model that failed to load or failed a look.
+
+## In the dashboard
+
+The **CPU vs GPU** tab (`http://<host>:8000/#compare`) shows all three side
+by side: laptop CPU, Tesla T4 and Jetson, the same clip playing in lock-step
+on each, with the totals above. The Jetson side is the optimised recording,
+added with:
+
+```bash
+python scripts/add_showcase_side.py dist/jetson-optimised --key jetson \
+    --tag "EDGE GPU" --sub "Jetson Orin Nano Super (8 GB)" --short Jetson
+```
+
+It copies the videos to `data/showcase/jetson/` and the results into
+`data/showcase/showcase.json` (`extra_sides`); re-running it replaces that
+side. Any other device recorded with `record_showcase.py` can be added the
+same way under its own key.

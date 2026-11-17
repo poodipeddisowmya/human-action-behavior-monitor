@@ -30,11 +30,28 @@ async def showcase() -> dict:
     return {"available": True, **summarize(json.loads(f.read_text(encoding="utf-8")))}
 
 
+def _extra_keys() -> set[str]:
+    f = _root() / "showcase.json"
+    if not f.exists():
+        return set()
+    data = json.loads(f.read_text(encoding="utf-8"))
+    return {x["key"] for x in data.get("extra_sides", [])}
+
+
 @router.get("/video/{side}/{name}")
 async def video(side: str, name: str) -> FileResponse:
-    if side not in ("left", "right") or "/" in name or "\\" in name or ".." in name:
+    # left = before/, right = the folder itself, an extra side = its key's folder.
+    if "/" in name or "\\" in name or ".." in name:
         raise HTTPException(400, "bad path")
-    path = _root() / ("before" if side == "left" else "") / name
+    if side == "left":
+        folder = "before"
+    elif side == "right":
+        folder = ""
+    elif side in _extra_keys():
+        folder = side
+    else:
+        raise HTTPException(400, "bad path")
+    path = _root() / folder / name
     if not path.is_file() or path.suffix.lower() != ".mp4":
         raise HTTPException(404, "not found")
     return FileResponse(path, media_type="video/mp4")
