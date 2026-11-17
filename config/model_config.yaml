@@ -106,6 +106,9 @@ gpu:
 #   VideoMAE look       FP32 202 ms -> FP16 75 ms
 #   pose detector       PyTorch FP16 33 ms (640 px) / 45 ms (960 px) -> TensorRT, see below
 #   CLIP                FP16 halves its 600 MB of weights; same speed
+#   deep_min_interval_s left at the gpu: 0.4 s. 0.2 s was measured over the
+#   29 showcase clips: 21/29 vs 22/29 clear, 70% vs 69% on screen, labels
+#   0.04 s later; the 8-frame stride per person, not the gap, sets the rate.
 jetson:
   detector_engine: true   # TensorRT engine, if scripts/build_trt_engines.py built one
   deep_half: true

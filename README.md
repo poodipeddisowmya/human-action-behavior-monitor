@@ -77,9 +77,11 @@ a confidence figure. Completed actions accumulate in the events table with
 their start time and duration.
 
 The **CPU vs GPU** tab (`http://localhost:8000/#compare`) plays a recorded
-comparison: the same clips through the same software on a laptop CPU and on a
-GPU, side by side and frame-synced, with the measured figures. Install a
-recording with `python scripts/install_showcase.py dist/client-demo`.
+comparison: the same clips through the same software on a laptop CPU, a Tesla
+T4 GPU and an NVIDIA Jetson, side by side and frame-synced, with the measured
+figures. Install a recording with `python scripts/install_showcase.py
+dist/client-demo`; add another device with `scripts/add_showcase_side.py`
+(see [docs/JETSON.md](docs/JETSON.md)).
 
 On a GPU the subtitle is a detailed description written by a small
 vision-language model (SmolVLM2) from the frames themselves, grounded in what
