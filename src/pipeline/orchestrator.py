@@ -17,6 +17,7 @@ from config import settings
 from src.action_recognition import ActionClassifier
 from src.description import SceneDescriber
 from src.input import VideoSource
+from src.input.video_source import is_live
 from src.temporal import EventGenerator, TemporalSmoother
 from src.temporal.event_generator import ActionEvent
 from src.temporal.stabilizer import LabelStabilizer
@@ -316,8 +317,11 @@ class Pipeline:
                 # The source may have switched to one with another frame rate.
                 target_dt = 1.0 / max(1, int(self._source.fps))
 
+            # A file is paced to its frame rate here; a live camera paces
+            # itself (read() waits for the next frame), and sleeping on top
+            # would fall behind it and serve older and older frames.
             elapsed = time.time() - t0
-            if elapsed < target_dt:
+            if elapsed < target_dt and not is_live(key or ""):
                 time.sleep(target_dt - elapsed)
 
     def _process_tracks(self, image: np.ndarray, tracks: list[Track],

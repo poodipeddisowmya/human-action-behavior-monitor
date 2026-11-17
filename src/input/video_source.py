@@ -199,9 +199,12 @@ def open_camera(index: int):
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, _CAM_SIZE[0])
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, _CAM_SIZE[1])
     cap.set(cv2.CAP_PROP_FPS, _CAM_FPS)
-    # Hold at most one frame in the driver queue, so what is shown is what
-    # the camera sees now, not a backlog from a second ago.
-    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    # Two driver buffers: what is shown is at most one frame (33 ms) old, not
+    # a backlog. Not one: with a single buffer the camera has nowhere to put
+    # the next frame while we hold the current one, so it skips every other
+    # frame. Measured on a Logitech C270 at 30 fps (Jetson Orin, 2026-11-17):
+    # 1 buffer -> exactly 15.0 fps whatever the exposure.
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
     return cap
 
 

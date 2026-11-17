@@ -33,7 +33,28 @@ the CPU cores drop to 729 MHz between bursts.
 ```bash
 ./run_jetson.sh                       # dashboard on http://<jetson-ip>:8000
 ./run_jetson.sh --source 0            # USB camera
+.venv/bin/python scripts/live_window.py --fullscreen   # live view on the Jetson's screen
 ```
+
+### Live camera
+
+Tested with a Logitech C270: 30 fps live, ~33 ms per frame to process.
+
+- Plug the camera in **before** starting the server: cameras are listed once,
+  at start-up. Then pick it under *Source*, or start with `--source 0`.
+- `scripts/live_window.py` shows the live video (boxes, labels, subtitle) in
+  a plain window, ~75 MB, against ~600 MB for a browser that the models need.
+  `f` full screen, `q` quit.
+- Watching from another computer, open `http://<jetson-ip>:8000` in its
+  browser rather than viewing the Jetson's screen over remote desktop
+  (RustDesk, VNC): re-encoding the screen makes live video lag and stutter.
+- In dim light the C270 lengthens its exposure and drops to 15 or 7.5 fps.
+  More light fixes it; so does turning off its exposure priority
+  (`v4l2-ctl -c exposure_auto_priority=0`, from `v4l-utils`), at the cost of
+  a darker picture. The setting lasts until the camera is unplugged.
+- Labels need the person 1.5–3 m away with hands in view and the light in
+  front: a head-and-shoulders close-up, or a bright window behind, leaves the
+  activity model guessing at low confidence.
 
 ## Results: laptop CPU vs Tesla T4 vs Jetson
 
