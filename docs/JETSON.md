@@ -62,14 +62,31 @@ Same 29 labelled clips, 12 s each, scored on what the screen showed
 (`scripts/build_showcase.py` rules). Laptop CPU and T4 from
 `data/showcase/showcase.json`; Jetson recorded here.
 
-| | Laptop CPU | Tesla T4 | Jetson, T4 settings | **Jetson, optimised** |
-|---|---:|---:|---:|---:|
-| Clearly recognised (correct label ≥ half the time) | 1/29 | 23/29 | 23/29 | 22/29 |
-| Correct label on screen, average | 4% | 70% | 72% | 69% |
-| Correct label first appeared (median) | 1.4 s | 1.2 s | 1.8 s | **1.0 s** |
-| Playback FPS (median; capped at each clip's own rate) | 17.5 | 24.0 | 22.8 | 22.8 |
-| Failed model looks during the run | – | – | 2 | **0** |
+| | Laptop CPU | Tesla T4 | Jetson, T4 settings | Jetson, optimised | **Jetson, current** |
+|---|---:|---:|---:|---:|---:|
+| Clearly recognised (correct label ≥ half the time) | 1/29 | 23/29 | 23/29 | 22/29 | **24/29** |
+| Correct label on screen, average | 4% | 70% | 72% | 69% | **73%** |
+| Wrong activity on screen, average | 0.3% | 0.9% | 1.2% | 2.0% | **0.6%** |
+| Correct label first appeared (median) | 1.4 s | 1.2 s | 1.8 s | 1.0 s | 1.3 s |
+| Playback FPS (median; capped at each clip's own rate) | 17.5 | 24.0 | 22.8 | 22.8 | 22.6 |
+| Failed model looks during the run | – | – | 2 | 0 | 0 |
 
+*Current* is *optimised* plus the per-person label fix below, recorded
+2026-11-17; it is the Jetson side of the dashboard's comparison tab. The
+laptop CPU's low wrong-activity figure is because it rarely shows any
+activity at all.
+
+- **One person's activity is no longer copied onto everyone.** With several
+  people in view, a person the activity model had not confirmed anything
+  for borrowed the scene-wide verdict, which pools everyone's looks, and
+  kept it even after their own looks found nothing; it also overrode their
+  walking or running. On a live webcam that painted one weak guess
+  ("smoking", "using phone 54%") on three people, one of them just
+  standing. Now a person borrows the scene verdict only until their own
+  first look, and measured walking/running beats a borrowed label
+  (`src/action_recognition/videomae_classifier.py`). One-person scenes are
+  unchanged. Over the 29 clips: wrong activity on screen 2.0% → 0.6%,
+  `demo-basic-run` 37% → 81% (a borrowed "dancing" gone), no clip worse.
 - **The Jetson matches the T4 on accuracy.** The ±1 clip differences are
   run-to-run variation on borderline clips: re-recording `hd-swimming-2`
   with *all* Jetson tuning off gave 0% swimming twice, against 62% in the
@@ -128,10 +145,10 @@ updaters before a run; a headless board has room for SmolVLM2 too.
 ## Reproduce the comparison
 
 ```bash
-python scripts/record_showcase.py --out dist/jetson-optimised           # ~19 min
+python scripts/record_showcase.py --out dist/jetson-current             # ~19 min
 JETSON_OPTIMISED=0 VLM_CAPTIONS=0 \
   python scripts/record_showcase.py --out dist/jetson-showcase          # ~22 min
-python scripts/compare_devices.py "dist/jetson-optimised=Jetson (optimised)" \
+python scripts/compare_devices.py "dist/jetson-current=Jetson (current)" \
                                   "dist/jetson-showcase=Jetson (T4 settings)"
 ```
 
@@ -142,11 +159,11 @@ lists, per clip, any model that failed to load or failed a look.
 
 The **CPU vs GPU** tab (`http://<host>:8000/#compare`) shows all three side
 by side: laptop CPU, Tesla T4 and Jetson, the same clip playing in lock-step
-on each, with the totals above. The Jetson side is the optimised recording,
+on each, with the totals above. The Jetson side is the current recording,
 added with:
 
 ```bash
-python scripts/add_showcase_side.py dist/jetson-optimised --key jetson \
+python scripts/add_showcase_side.py dist/jetson-current --key jetson \
     --tag "EDGE GPU" --sub "Jetson Orin Nano Super (8 GB)" --short Jetson
 ```
 

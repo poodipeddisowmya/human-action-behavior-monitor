@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import argparse
 import http.client
+import re
+import subprocess
 import time
 import urllib.request
 
@@ -19,6 +21,24 @@ import cv2
 import numpy as np
 
 WINDOW = "Human Action Monitor - live"
+
+
+def fit(img: np.ndarray, size: tuple[int, int]) -> np.ndarray:
+    """Scale to fill size (w, h) without stretching; black bars for the rest.
+
+    The Qt window does not scale the picture itself in full screen: a 960 px
+    frame sat small in the middle of a 1920 px screen. (Nor does it report
+    the window's size: getWindowImageRect gives the last picture's.)
+    """
+    w, h = size
+    if w <= 0 or h <= 0:
+        return img
+    s = min(w / img.shape[1], h / img.shape[0])
+    nw, nh = max(1, int(img.shape[1] * s)), max(1, int(img.shape[0] * s))
+    out = np.zeros((h, w, 3), np.uint8)
+    x, y = (w - nw) // 2, (h - nh) // 2
+    out[y:y + nh, x:x + nw] = cv2.resize(img, (nw, nh), interpolation=cv2.INTER_LINEAR)
+    return out
 
 
 def frames(url: str):
@@ -43,6 +63,16 @@ def frames(url: str):
                     yield img
 
 
+def screen_size() -> tuple[int, int] | None:
+    """The X screen's size, from xdpyinfo; None if it cannot be read."""
+    try:
+        out = subprocess.run(["xdpyinfo"], capture_output=True, text=True, timeout=5).stdout
+        m = re.search(r"dimensions:\s+(\d+)x(\d+)", out)
+        return (int(m.group(1)), int(m.group(2))) if m else None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--base", default="http://127.0.0.1:8000")
@@ -51,6 +81,7 @@ def main() -> None:
     # GUI_NORMAL: no Qt toolbar or status bar, just the picture.
     cv2.namedWindow(WINDOW, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_NORMAL)
     full = args.fullscreen
+    screen = screen_size()
     cv2.setWindowProperty(WINDOW, cv2.WND_PROP_FULLSCREEN,
                           cv2.WINDOW_FULLSCREEN if full else cv2.WINDOW_NORMAL)
     sized = False
@@ -60,6 +91,8 @@ def main() -> None:
                 if not sized and not full:
                     cv2.resizeWindow(WINDOW, img.shape[1], img.shape[0])
                     sized = True
+                if full and screen:
+                    img = fit(img, screen)
                 cv2.imshow(WINDOW, img)
                 key = cv2.waitKey(1) & 0xFF
                 if key in (ord("q"), 27):
