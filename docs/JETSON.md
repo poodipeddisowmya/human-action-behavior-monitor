@@ -62,19 +62,26 @@ Same 29 labelled clips, 12 s each, scored on what the screen showed
 (`scripts/build_showcase.py` rules). Laptop CPU and T4 from
 `data/showcase/showcase.json`; Jetson recorded here.
 
-| | Laptop CPU | Tesla T4 | Jetson, T4 settings | Jetson, optimised | **Jetson, current** |
-|---|---:|---:|---:|---:|---:|
-| Clearly recognised (correct label ≥ half the time) | 1/29 | 23/29 | 23/29 | 22/29 | **24/29** |
-| Correct label on screen, average | 4% | 70% | 72% | 69% | **73%** |
-| Wrong activity on screen, average | 0.3% | 0.9% | 1.2% | 2.0% | **0.6%** |
-| Correct label first appeared (median) | 1.4 s | 1.2 s | 1.8 s | 1.0 s | 1.3 s |
-| Playback FPS (median; capped at each clip's own rate) | 17.5 | 24.0 | 22.8 | 22.8 | 22.6 |
-| Failed model looks during the run | – | – | 2 | 0 | 0 |
+| | Laptop CPU | Tesla T4 | Jetson, T4 settings | Jetson, optimised | Jetson, per-person fix | **Jetson, current** |
+|---|---:|---:|---:|---:|---:|---:|
+| Clearly recognised (correct label ≥ half the time) | 1/29 | 23/29 | 23/29 | 22/29 | 24/29 | **23/29** |
+| Correct label on screen, average | 4% | 70% | 72% | 69% | 73% | **70%** |
+| Wrong activity on screen, average | 0.3% | 0.9% | 1.2% | 2.0% | 0.6% | **0.9%** |
+| Correct label first appeared (median) | 1.4 s | 1.2 s | 1.8 s | 1.0 s | 1.3 s | 1.9 s |
+| Playback FPS (median; capped at each clip's own rate) | 17.5 | 24.0 | 22.8 | 22.8 | 22.6 | 22.4 |
+| Failed model looks during the run | – | – | 2 | 0 | 0 | 3 of 1,048 |
 
-*Current* is *optimised* plus the per-person label fix below, recorded
-2026-11-17; it is the Jetson side of the dashboard's comparison tab. The
-laptop CPU's low wrong-activity figure is because it rarely shows any
-activity at all.
+*Per-person fix* is *optimised* plus the per-person label fix below
+(2026-11-17). *Current* adds the new activities (making tea, taking tablets,
+falling down; [NEW_ACTIVITIES.md](NEW_ACTIVITIES.md)) and is the Jetson side
+of the dashboard's comparison tab (2026-11-18). Its accuracy is within the
+run-to-run spread (the two clips that moved, `demo-eating` and
+`hd-swimming-2`, have swung 0-56% between earlier runs too); none of the 32
+clips is ever labelled with a new activity. The one real cost: X-CLIP shares
+the Orin Nano's GPU with the activity model, and the first correct label
+comes about 0.6 s later (measured in two runs). `OPEN_VOCAB=0` removes it,
+and the new activities with it. The laptop CPU's low wrong-activity figure is
+because it rarely shows any activity at all.
 
 - **One person's activity is no longer copied onto everyone.** With several
   people in view, a person the activity model had not confirmed anything

@@ -179,14 +179,26 @@ class Settings(BaseModel):
     probe_cameras: bool = Field(default_factory=lambda: _env_bool(
         "PROBE_CAMERAS", default=os.name == "nt" or bool(os.getenv("DISPLAY"))))
 
+    # Proof images for logged activities (src/storage/evidence.py): up to
+    # three annotated shots of the person per event, kept this many days.
+    evidence_enabled: bool = Field(default_factory=lambda: _env_bool("EVIDENCE", True))
+    evidence_interval_s: float = Field(
+        default_factory=lambda: float(os.getenv("EVIDENCE_INTERVAL_S", "1.0")))
+    evidence_retention_days: int = Field(
+        default_factory=lambda: int(os.getenv("EVIDENCE_RETENTION_DAYS", "30")))
+
     model: ModelConfig
+    # Activities defined by text and recognised by a zero-shot video
+    # transformer (open_vocab: in model_config.yaml; src/action_recognition/
+    # open_vocab.py). GPU only; OPEN_VOCAB=0 turns it off.
+    open_vocab: dict = Field(default_factory=dict)
 
 
 @lru_cache
 def _load() -> Settings:
     with (ROOT / "config" / "model_config.yaml").open("r", encoding="utf-8") as f:
         raw = yaml.safe_load(f)
-    s = Settings(model=ModelConfig(**raw["model"]))
+    s = Settings(model=ModelConfig(**raw["model"]), open_vocab=raw.get("open_vocab") or {})
     if s.device.startswith("cuda"):
         # On a GPU the speed/responsiveness trade-offs made for the CPU no
         # longer apply: look at the activity far more often (labels confirm
@@ -226,6 +238,8 @@ def _load() -> Settings:
     for flag in ("DETECTOR_ENGINE", "DEEP_HALF", "CLIP_HALF"):
         if os.getenv(flag):
             setattr(s.model, flag.lower(), _env_bool(flag))
+    if os.getenv("OPEN_VOCAB"):
+        s.open_vocab["enabled"] = _env_bool("OPEN_VOCAB")
     if os.getenv("LABEL_MIN_DWELL_S"):
         s.model.label_min_dwell_s = float(os.environ["LABEL_MIN_DWELL_S"])
     return s

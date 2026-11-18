@@ -11,6 +11,7 @@ from datetime import datetime
 from typing import Callable
 
 from .smoother import SmoothedPrediction
+from src.utils.timefmt import utc_iso
 
 
 @dataclass
@@ -20,6 +21,9 @@ class ActionEvent:
     start_time: datetime
     end_time: datetime | None = None
     confidences: list[float] = field(default_factory=list)
+    # Proof images (JPEG bytes) attached when the event closes; see
+    # src/storage/evidence.py. Not part of to_dict().
+    evidence: list[bytes] = field(default_factory=list, repr=False)
 
     @property
     def duration_s(self) -> float:
@@ -35,8 +39,8 @@ class ActionEvent:
         return {
             "person_id": self.person_id,
             "label": self.label,
-            "start_time": self.start_time.isoformat(),
-            "end_time": self.end_time.isoformat() if self.end_time else None,
+            "start_time": utc_iso(self.start_time),
+            "end_time": utc_iso(self.end_time),
             "duration_s": self.duration_s,
             "confidence": self.confidence,
         }

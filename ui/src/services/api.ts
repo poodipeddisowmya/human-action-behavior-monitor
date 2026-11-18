@@ -5,11 +5,13 @@ export interface PersonSummary {
 }
 
 export interface ActionHistoryEntry {
+  id?: number;
   label: string;
   start_time: string;
   end_time: string;
   duration_s: number;
   confidence: number;
+  evidence?: string[];       // proof image URLs (start, middle, end)
 }
 
 export interface PersonDetail extends PersonSummary {
@@ -17,12 +19,14 @@ export interface PersonDetail extends PersonSummary {
 }
 
 export interface EventMessage {
+  id?: number;
   person_id: string;
   label: string;
   start_time: string;
   end_time: string;
   duration_s: number;
   confidence: number;
+  evidence?: string[];       // proof image URLs (start, middle, end)
 }
 
 async function json<T>(url: string): Promise<T> {
@@ -75,9 +79,10 @@ export interface ShowcaseClip {
   name: string;
   expected: string | null;
   featured: boolean;
-  left: ShowcaseSide;
+  left: ShowcaseSide | null;
   right: ShowcaseSide;
   extra?: Record<string, ShowcaseSide | null>;   // further devices, by key
+  new_activity?: boolean;    // recorded on the GPUs only (added after the CPU run)
 }
 export interface ShowcaseTotals {
   clear: number;
@@ -96,6 +101,8 @@ export interface Showcase {
   totals: { left: ShowcaseTotals; right: ShowcaseTotals };
   // Further devices recorded on the same clips (scripts/add_showcase_side.py).
   extra?: { key: string; tag: string; sub: string; short: string; recorded: string | null; totals: ShowcaseTotals }[];
+  // Activities added after the CPU recording, totalled per GPU side.
+  new_activities?: { clips: number; totals: Record<string, ShowcaseTotals> } | null;
   clips: ShowcaseClip[];
 }
 

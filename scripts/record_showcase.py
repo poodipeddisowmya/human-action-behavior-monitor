@@ -25,6 +25,22 @@ JETSON = Path("/etc/nv_tegra_release").exists()
 
 SECONDS = 12
 CROWD = ["office-people.mp4", "store-aisle.mp4", "street-surveillance.avi"]
+# The activities added after Kinetics (open_vocab: and the fall detector),
+# on real third-party footage in data/new-activities/ (kept out of git:
+# their licences do not allow re-sharing the raw files; see its SOURCES.md).
+NEW_ACTIVITY_CLIPS = {
+    "mixkit-46792.mp4": "taking tablets",
+    "mixkit-48203.mp4": "taking tablets",
+    "commons-chai-kumbakonam.ogv": "making tea",
+    "commons-tea-traditional.webm": "making tea",
+    "commons-tea-moroccan.webm": "making tea",
+    "mixkit-23814.mp4": "falling down",
+}
+NEW_DIR = ROOT / "data" / "new-activities"
+
+
+def clip_path(name: str) -> Path:
+    return NEW_DIR / name if name in NEW_ACTIVITY_CLIPS else ROOT / "data" / "samples" / name
 
 
 def device_name() -> str:
@@ -82,7 +98,8 @@ def main() -> None:
     expected = expected_labels()
     for f in sorted((ROOT / "data" / "samples").glob("hd-*.mp4")):
         expected[f.name] = f.stem.split("-")[1]
-    clips = [c for c in [*expected, *CROWD] if (ROOT / "data" / "samples" / c).exists()]
+    expected.update(NEW_ACTIVITY_CLIPS)
+    clips = [c for c in [*expected, *CROWD] if clip_path(c).exists()]
     if a.clips:
         clips = [c for c in clips if c in a.clips]
 
@@ -94,13 +111,15 @@ def main() -> None:
             reclaim_page_cache()
         log = a.out / f"{Path(c).stem}.log"
         with log.open("w", encoding="utf-8") as fh:
-            subprocess.run([sys.executable, "scripts/process_video.py", f"data/samples/{c}",
+            subprocess.run([sys.executable, "scripts/process_video.py", str(clip_path(c)),
                             "--out", str(a.out), "--min-seconds", str(SECONDS),
                             "--max-width", "1280"],
                            cwd=ROOT, env={**os.environ, "PYTHONIOENCODING": "utf-8"},
                            stdout=fh, stderr=subprocess.STDOUT, check=False)
         text = log.read_text(encoding="utf-8", errors="ignore")
         lost = [name for name, marker in (("detailed captions (SmolVLM2)", "scene narrator unavailable"),
+                                          ("open-vocabulary activities (X-CLIP)", "[open-vocab] unavailable"),
+                                          ("X-CLIP from the start (loaded late)", "[open-vocab] load failed"),
                                           ("posture check (CLIP)", "posture check unavailable"),
                                           ("place names (CLIP)", "scene description unavailable"),
                                           ("VideoMAE (fell back to S3D)", "VideoMAE unavailable"),
@@ -109,6 +128,7 @@ def main() -> None:
         # Failures while running, not just at load: on a Jetson a model can
         # load and then run out of memory on individual looks.
         for name, marker in (("activity looks failed", "[deep] inference error"),
+                             ("open-vocabulary looks failed", "[open-vocab] look failed"),
                              ("subtitle sentences failed", "scene narration failed"),
                              ("scene looks failed", "scene look failed"),
                              ("detection failures", "detection failed")):
