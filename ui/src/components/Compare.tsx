@@ -20,6 +20,10 @@ interface Column {
 
 const pct = (x: number | null | undefined) => (x == null ? "—" : `${Math.round(x * 100)}%`);
 const secs = (x: number | null | undefined) => (x == null ? "never" : `${x.toFixed(1)} s`);
+// New-activity clips are named after their source (mixkit-46792): show the
+// activity instead.
+const clipTitle = (c: ShowcaseClip) =>
+  c.new_activity && c.expected ? c.expected[0].toUpperCase() + c.expected.slice(1) : title(c.name);
 const title = (name: string) =>
   name.replace(/^demo-|^hd-/, "").replace(/-\d+$/, "").replace(/-/g, " ")
     .replace(/^\w/, (c) => c.toUpperCase());
@@ -104,6 +108,8 @@ export default function Compare() {
   // One <video> per column, by column key. "right" (the GPU) is the clock.
   const videos = useRef<Record<string, HTMLVideoElement | null>>({});
   const all = () => Object.values(videos.current).filter((v): v is HTMLVideoElement => !!v);
+  // The clock: the T4 video, or the first one there when the T4 lacks the clip.
+  const clockVideo = () => videos.current.right ?? all()[0] ?? null;
 
   useEffect(() => {
     api.showcase().then((d) => {
@@ -137,7 +143,7 @@ export default function Compare() {
   useEffect(() => {
     let raf = 0;
     const tick = () => {
-      const clock = videos.current.right;
+      const clock = clockVideo();
       if (clock && !clock.paused) {
         for (const v of all()) {
           if (v !== clock && Math.abs(v.currentTime - clock.currentTime) > 0.08) v.currentTime = clock.currentTime;
@@ -152,7 +158,7 @@ export default function Compare() {
   // The button reflects what the video is really doing: a browser may refuse
   // autoplay, and then "Pause" over a stopped video reads as broken.
   useEffect(() => {
-    const v = videos.current.right;
+    const v = clockVideo();
     if (!v) return;
     const on = () => setPlaying(true), off = () => setPlaying(false);
     v.addEventListener("play", on);
@@ -221,15 +227,28 @@ export default function Compare() {
 
       {data.new_activities && (
         <section className="card px-4 py-3 text-sm">
-          <div className="font-medium">New activities: making tea, taking tablets, falling down</div>
-          <div className="mt-1 text-muted">
-            {data.new_activities.clips} clips recorded on the GPUs only (added after the CPU recording).{" "}
-            {cols.filter((c) => c.key !== "left" && data.new_activities!.totals[c.key]).map((c) => {
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            <span className="rounded bg-accent/20 px-1.5 text-[10px] font-semibold text-accent">NEW</span>
+            <span className="font-medium capitalize">{data.new_activities.labels.join(" · ")}</span>
+            <span className="text-muted">
+              — {data.new_activities.clips} clips, added after the CPU recording
+            </span>
+          </div>
+          <div className="mt-1.5 flex flex-wrap gap-x-6 gap-y-1">
+            {cols.map((c) => {
               const t = data.new_activities!.totals[c.key];
               return (
-                <span key={c.key} className="mr-3 whitespace-nowrap">
-                  <b className="text-good">{t.clear}/{data.new_activities!.clips}</b> clearly recognised,{" "}
-                  {pct(t.mean_share)} on screen <span className="text-[11px]">({c.short})</span>
+                <span key={c.key} className="whitespace-nowrap">
+                  <span className="text-muted">{c.short}: </span>
+                  {t ? (
+                    <>
+                      <b className="text-good">{t.clear}/{t.recorded}</b> clearly recognised,{" "}
+                      <b className="text-good">{t.appeared}/{t.recorded}</b> shown at all,{" "}
+                      {pct(t.mean_share)} on screen
+                    </>
+                  ) : (
+                    <span className="text-muted">not recorded yet</span>
+                  )}
                 </span>
               );
             })}
@@ -247,7 +266,7 @@ export default function Compare() {
                 className={"rounded-lg border px-3 py-1.5 text-left text-xs transition " +
                   (c.name === current ? "border-accent bg-accent/15" : "border-border bg-elevated hover:border-accent/60")}>
                 <div className="font-medium text-slate-100">
-                  {c.new_activity ? (c.expected ? c.expected[0].toUpperCase() + c.expected.slice(1) : title(c.name)) : title(c.name)}
+                  {clipTitle(c)}
                   {c.name.startsWith("hd-") ? " (HD)" : ""}
                   {c.new_activity && <span className="ml-1.5 rounded bg-accent/20 px-1 text-[10px] font-semibold text-accent">NEW</span>}
                 </div>
@@ -267,7 +286,7 @@ export default function Compare() {
           <>
             <div className="flex items-center justify-between gap-3">
               <div className="text-sm">
-                <span className="font-semibold">{title(clip.name)}</span>
+                <span className="font-semibold">{clipTitle(clip)}</span>
                 <span className="text-muted"> · {clip.expected ? <>expected activity: <b className="text-slate-200">{clip.expected}</b></> : "crowded scene: people found and tracked"}</span>
               </div>
               <div className="flex gap-2">

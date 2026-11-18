@@ -6,7 +6,8 @@
 The tab compares the laptop CPU and the Tesla T4 recording installed by
 scripts/install_showcase.py. This adds a third (or fourth...) side from a
 folder written by scripts/record_showcase.py: the same clips through the same
-software on another device. Its videos go to data/showcase/<key>/ and its
+software on another device; clips the CPU/T4 recording lacks are listed with
+"not recorded" on those sides. Its videos go to data/showcase/<key>/ and its
 results into data/showcase/showcase.json under "extra_sides"; running it again
 with the same key replaces that side. Run install_showcase.py first: it starts
 data/showcase/ afresh.
@@ -41,10 +42,10 @@ def main() -> None:
     data = json.loads(target.read_text(encoding="utf-8"))
     dev = json.loads((args.folder / "showcase.json").read_text(encoding="utf-8"))
 
-    # Only clips the installed CPU/T4 comparison also has.
+    # Every clip the device recorded: ones the CPU/T4 recording lacks (new
+    # activities) are listed with "not recorded" on those sides.
     have = {Path(r["video"]).stem for r in data.get("clips", [])}
-    rows = [r for r in dev.get("clips", []) if Path(r["video"]).stem in have
-            and r.get("annotated_video")]
+    rows = [r for r in dev.get("clips", []) if r.get("annotated_video")]
     out = DST / args.key
     shutil.rmtree(out, ignore_errors=True)
     out.mkdir(parents=True)
@@ -67,7 +68,9 @@ def main() -> None:
                            if x.get("key") != args.key] + [side]
     target.write_text(json.dumps(data, indent=2), encoding="utf-8")
     size = sum(f.stat().st_size for f in out.glob("*.mp4")) / 2**20
-    print(f"  added {args.key}: {len(kept)} of {len(have)} clips ({size:.0f} MB) into {out}")
+    extra = len({Path(r["video"]).stem for r in kept} - have)
+    print(f"  added {args.key}: {len(kept)} clips ({extra} not in the GPU recording), "
+          f"{size:.0f} MB into {out}")
 
 
 if __name__ == "__main__":

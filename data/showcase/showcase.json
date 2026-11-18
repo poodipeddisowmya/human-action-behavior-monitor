@@ -2952,6 +2952,275 @@
           "expected": "swimming"
         },
         {
+          "video": "mixkit-46792.mp4",
+          "device": "cuda",
+          "frames": 300,
+          "processing_fps": 22.4,
+          "people": 1,
+          "by_label": {
+            "taking tablets": {
+              "events": 1,
+              "seconds": 8.2
+            },
+            "sitting": {
+              "events": 3,
+              "seconds": 3.2
+            },
+            "drinking": {
+              "events": 1,
+              "seconds": 0.9
+            },
+            "bending": {
+              "events": 1,
+              "seconds": 0.6
+            }
+          },
+          "labels_shown": {
+            "taking tablets": 0.64,
+            "sitting": 0.242,
+            "drinking": 0.069,
+            "bending": 0.048
+          },
+          "first_seen_s": {
+            "detecting\u2026": 0.16,
+            "sitting": 0.32,
+            "bending": 1.92,
+            "drinking": 3.8,
+            "taking tablets": 4.6
+          },
+          "label_changes_per_10s": 5.83,
+          "tracked_mean": 0.99,
+          "tracked_max": 1,
+          "annotated_video": "mixkit-46792_annotated.mp4",
+          "expected": "taking tablets"
+        },
+        {
+          "video": "mixkit-48203.mp4",
+          "device": "cuda",
+          "frames": 600,
+          "processing_fps": 42.1,
+          "people": 3,
+          "by_label": {
+            "sitting": {
+              "events": 2,
+              "seconds": 8.8
+            },
+            "smoking": {
+              "events": 2,
+              "seconds": 5.0
+            },
+            "taking tablets": {
+              "events": 3,
+              "seconds": 3.8
+            },
+            "standing": {
+              "events": 1,
+              "seconds": 0.3
+            },
+            "drinking": {
+              "events": 1,
+              "seconds": 0.0
+            }
+          },
+          "labels_shown": {
+            "sitting": 0.486,
+            "smoking": 0.281,
+            "taking tablets": 0.212,
+            "standing": 0.018,
+            "drinking": 0.003
+          },
+          "first_seen_s": {
+            "detecting\u2026": 0.14,
+            "sitting": 0.18,
+            "standing": 1.2,
+            "smoking": 4.54,
+            "taking tablets": 8.78,
+            "drinking": 10.08
+          },
+          "label_changes_per_10s": 6.67,
+          "tracked_mean": 1.28,
+          "tracked_max": 2,
+          "annotated_video": "mixkit-48203_annotated.mp4",
+          "expected": "taking tablets"
+        },
+        {
+          "video": "commons-chai-kumbakonam.ogv",
+          "device": "cuda",
+          "frames": 359,
+          "processing_fps": 26.9,
+          "people": 1,
+          "by_label": {
+            "making tea": {
+              "events": 1,
+              "seconds": 7.6
+            },
+            "sitting": {
+              "events": 4,
+              "seconds": 4.5
+            },
+            "running": {
+              "events": 3,
+              "seconds": 0.8
+            }
+          },
+          "labels_shown": {
+            "making tea": 0.59,
+            "sitting": 0.347,
+            "running": 0.063
+          },
+          "first_seen_s": {
+            "detecting\u2026": 0.17,
+            "sitting": 0.23,
+            "running": 0.37,
+            "making tea": 5.11
+          },
+          "label_changes_per_10s": 10.02,
+          "tracked_mean": 0.99,
+          "tracked_max": 1,
+          "annotated_video": "commons-chai-kumbakonam_annotated.mp4",
+          "expected": "making tea"
+        },
+        {
+          "video": "commons-tea-traditional.webm",
+          "device": "cuda",
+          "frames": 360,
+          "processing_fps": 25.7,
+          "people": 2,
+          "by_label": {
+            "standing": {
+              "events": 6,
+              "seconds": 7.1
+            },
+            "making tea": {
+              "events": 1,
+              "seconds": 3.3
+            },
+            "sitting": {
+              "events": 2,
+              "seconds": 2.0
+            },
+            "walking": {
+              "events": 1,
+              "seconds": 0.8
+            },
+            "running": {
+              "events": 1,
+              "seconds": 0.1
+            }
+          },
+          "labels_shown": {
+            "standing": 0.535,
+            "making tea": 0.249,
+            "sitting": 0.151,
+            "walking": 0.056,
+            "running": 0.008
+          },
+          "first_seen_s": {
+            "detecting\u2026": 0.43,
+            "walking": 0.77,
+            "standing": 1.43,
+            "sitting": 2.43,
+            "running": 4.53,
+            "making tea": 9.03
+          },
+          "label_changes_per_10s": 7.5,
+          "tracked_mean": 1.04,
+          "tracked_max": 2,
+          "annotated_video": "commons-tea-traditional_annotated.mp4",
+          "expected": "making tea"
+        },
+        {
+          "video": "commons-tea-moroccan.webm",
+          "device": "cuda",
+          "frames": 360,
+          "processing_fps": 17.9,
+          "people": 4,
+          "by_label": {
+            "making tea": {
+              "events": 4,
+              "seconds": 8.6
+            },
+            "standing": {
+              "events": 1,
+              "seconds": 6.3
+            },
+            "cooking": {
+              "events": 10,
+              "seconds": 5.0
+            }
+          },
+          "labels_shown": {
+            "making tea": 0.441,
+            "standing": 0.302,
+            "cooking": 0.256
+          },
+          "first_seen_s": {
+            "detecting\u2026": 0.33,
+            "standing": 1.13,
+            "making tea": 4.93,
+            "cooking": 7.7
+          },
+          "label_changes_per_10s": 9.17,
+          "tracked_mean": 1.09,
+          "tracked_max": 2,
+          "annotated_video": "commons-tea-moroccan_annotated.mp4",
+          "expected": "making tea"
+        },
+        {
+          "video": "mixkit-23814.mp4",
+          "device": "cuda",
+          "frames": 300,
+          "processing_fps": 20.9,
+          "people": 1,
+          "by_label": {
+            "falling down": {
+              "events": 1,
+              "seconds": 6.5
+            },
+            "standing": {
+              "events": 1,
+              "seconds": 2.5
+            },
+            "running": {
+              "events": 4,
+              "seconds": 1.7
+            },
+            "walking": {
+              "events": 1,
+              "seconds": 0.9
+            },
+            "cycling": {
+              "events": 1,
+              "seconds": 0.6
+            },
+            "exercising": {
+              "events": 2,
+              "seconds": 0.2
+            }
+          },
+          "labels_shown": {
+            "falling down": 0.531,
+            "standing": 0.206,
+            "running": 0.126,
+            "walking": 0.069,
+            "cycling": 0.051
+          },
+          "first_seen_s": {
+            "detecting\u2026": 0.4,
+            "running": 0.84,
+            "exercising": 1.44,
+            "falling down": 2.48,
+            "walking": 8.4,
+            "standing": 9.16,
+            "cycling": 11.44
+          },
+          "label_changes_per_10s": 8.33,
+          "tracked_mean": 0.96,
+          "tracked_max": 1,
+          "annotated_video": "mixkit-23814_annotated.mp4",
+          "expected": "falling down"
+        },
+        {
           "video": "office-people.mp4",
           "device": "cuda",
           "frames": 144,
