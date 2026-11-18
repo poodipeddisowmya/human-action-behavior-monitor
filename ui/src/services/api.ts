@@ -80,7 +80,7 @@ export interface ShowcaseClip {
   expected: string | null;
   featured: boolean;
   left: ShowcaseSide | null;
-  right: ShowcaseSide;
+  right: ShowcaseSide | null;
   extra?: Record<string, ShowcaseSide | null>;   // further devices, by key
   new_activity?: boolean;    // recorded on the GPUs only (added after the CPU run)
 }
@@ -102,7 +102,11 @@ export interface Showcase {
   // Further devices recorded on the same clips (scripts/add_showcase_side.py).
   extra?: { key: string; tag: string; sub: string; short: string; recorded: string | null; totals: ShowcaseTotals }[];
   // Activities added after the CPU recording, totalled per GPU side.
-  new_activities?: { clips: number; totals: Record<string, ShowcaseTotals> } | null;
+  new_activities?: {
+    clips: number;
+    labels: string[];
+    totals: Record<string, ShowcaseTotals & { recorded: number }>;   // by column key
+  } | null;
   clips: ShowcaseClip[];
 }
 
