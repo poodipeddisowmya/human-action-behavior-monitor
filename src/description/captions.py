@@ -396,7 +396,9 @@ class CaptionComposer:
         elif sentence != self._pending:
             self._pending, self._pending_since = sentence, now
             self._pending_key = key
-        if _only_adds(self._shown_key, key):
+        if any(g in _FALL for g in groups):
+            hold = 0.0                  # an alert goes up at once
+        elif _only_adds(self._shown_key, key) or _sharpens(self._shown_key, key):
             hold = _FAST_HOLD_S
         elif _only_count_differs(self._shown_key, key):
             hold = _COUNT_HOLD_S
@@ -405,6 +407,29 @@ class CaptionComposer:
         if self._pending is not None and now - self._pending_since >= hold:
             self._shown, self._shown_key, self._pending = self._pending, self._pending_key, None
         return self._shown
+
+
+def _sharpens(old: tuple, new: tuple) -> bool:
+    """True when `new` only replaces plain postures with specific activities
+    ("sitting" -> "taking tablets"): more information, not a contradiction,
+    so it goes up as fast as an addition. Measured on the Jetson, the full
+    hold kept "A person is sitting" under a box already reading "taking
+    tablets 73%" for over a second."""
+    if not old:
+        return False
+    (n0, g0, s0), (n1, g1, s1) = old, new
+    if n0 != n1 or (s0 and s0 != s1):
+        return False
+    gone = list(g0)
+    for g in g1:
+        if g in gone:
+            gone.remove(g)
+    added = list(g1)
+    for g in g0:
+        if g in added:
+            added.remove(g)
+    return bool(added) and all(g in _POSTURE for g in gone) \
+        and all(g not in _POSTURE for g in added)
 
 
 def _only_count_differs(old: tuple, new: tuple) -> bool:
