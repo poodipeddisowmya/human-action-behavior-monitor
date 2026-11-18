@@ -117,7 +117,7 @@ export default function Compare() {
     if (!data?.available) return [];
     return [
       { key: "left", kind: "cpu", tag: data.left.tag, sub: data.left.sub, short: "CPU",
-        totals: data.totals.left, of: (c) => c.left },
+        totals: data.totals.left, of: (c) => c.left ?? null },
       { key: "right", kind: "gpu", tag: data.right.tag, sub: data.right.sub, short: data.right.sub,
         totals: data.totals.right, of: (c) => c.right },
       ...(data.extra ?? []).map((x): Column => ({
@@ -219,6 +219,24 @@ export default function Compare() {
         <Delta label="Playback speed (median)" names={names} values={cols.map((c) => fps(c.totals.median_fps))} />
       </section>
 
+      {data.new_activities && (
+        <section className="card px-4 py-3 text-sm">
+          <div className="font-medium">New activities: making tea, taking tablets, falling down</div>
+          <div className="mt-1 text-muted">
+            {data.new_activities.clips} clips recorded on the GPUs only (added after the CPU recording).{" "}
+            {cols.filter((c) => c.key !== "left" && data.new_activities!.totals[c.key]).map((c) => {
+              const t = data.new_activities!.totals[c.key];
+              return (
+                <span key={c.key} className="mr-3 whitespace-nowrap">
+                  <b className="text-good">{t.clear}/{data.new_activities!.clips}</b> clearly recognised,{" "}
+                  {pct(t.mean_share)} on screen <span className="text-[11px]">({c.short})</span>
+                </span>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <section className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           {clips.map((c) => {
@@ -228,7 +246,11 @@ export default function Compare() {
               <button key={c.name} onClick={() => setCurrent(c.name)}
                 className={"rounded-lg border px-3 py-1.5 text-left text-xs transition " +
                   (c.name === current ? "border-accent bg-accent/15" : "border-border bg-elevated hover:border-accent/60")}>
-                <div className="font-medium text-slate-100">{title(c.name)}{c.name.startsWith("hd-") ? " (HD)" : ""}</div>
+                <div className="font-medium text-slate-100">
+                  {c.new_activity ? (c.expected ? c.expected[0].toUpperCase() + c.expected.slice(1) : title(c.name)) : title(c.name)}
+                  {c.name.startsWith("hd-") ? " (HD)" : ""}
+                  {c.new_activity && <span className="ml-1.5 rounded bg-accent/20 px-1 text-[10px] font-semibold text-accent">NEW</span>}
+                </div>
                 <div className="text-muted tabular-nums">
                   {base} → {rest.join(" · ")}{c.expected ? "" : " people"}
                 </div>

@@ -51,6 +51,9 @@ _PHRASES: dict[str, str] = {
     "walking": "walking",
     "running": "running",
     "falling": "falling",
+    "falling down": "falling down",
+    "making tea": "making tea",
+    "taking tablets": "taking tablets",
     "bending": "bending down",
     "lying": "lying down",
     "kneeling": "kneeling",
@@ -168,6 +171,7 @@ _WITH_OBJECT: dict[tuple[str, str], str] = {
     ("brushing teeth", "toothbrush"): "brushing their teeth",
 }
 _POSTURE_ADJ = {"sitting": "seated", "standing": "standing"}
+_FALL = {"falling", "falling down"}
 
 
 def _count(n: int) -> str:
@@ -208,6 +212,13 @@ def compose_sentence(labels: list[str | None], scene: str | None,
         return ""
 
     known = [l for l in labels if l]
+    # A fall is an alert, said first and plainly, whatever else is going on.
+    fallen = sum(1 for l in known if l in _FALL)
+    if fallen:
+        who = "a person has" if fallen == 1 else f"{_count(fallen)} people have"
+        rest = n - fallen
+        tail = f" {_count(rest).capitalize()} other{'s' if rest != 1 else ''} in view." if rest else ""
+        return f"Alert: {who} fallen down{where}.{tail}"
     if n == 1:
         if not known:
             return f"One person{where}; identifying the activity…"

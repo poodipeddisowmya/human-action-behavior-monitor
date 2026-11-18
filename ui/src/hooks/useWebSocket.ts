@@ -1,10 +1,10 @@
 import { useEffect, useRef } from "react";
+import { EventMessage } from "../services/api";
 
 export type WsMessage =
   | { type: "frame_annotations"; annotations: any[];
       caption?: { text: string | null; scene: string | null } | null }
-  | { type: "event"; person_id: string; label: string;
-      start_time: string; end_time: string; duration_s: number; confidence: number };
+  | ({ type: "event" } & EventMessage);
 
 // Reconnects on its own. A dropped socket (server restart, a tunnel or
 // Wi-Fi blip) used to leave the dashboard silently frozen until a reload.

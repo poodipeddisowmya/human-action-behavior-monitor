@@ -46,6 +46,10 @@ def summarize(data: dict) -> dict:
     left = {Path(r["video"]).stem: r for r in data.get("before", [])}
     right = {Path(r["video"]).stem: r for r in data.get("clips", [])}
     both = [c for c in right if c in left]
+    # Recorded on the GPUs only (activities added after the CPU recording):
+    # listed with no CPU side, and totalled separately.
+    gpu_only = [c for c in right if c not in left]
+    gpu_only_labelled = [c for c in gpu_only if right[c].get("expected")]
     labelled = [c for c in both if right[c].get("expected")]
     b, a = [left[c] for c in labelled], [right[c] for c in labelled]
     n = len(labelled)
@@ -53,7 +57,7 @@ def summarize(data: dict) -> dict:
                    for r in x.get("clips", []) if Path(r["video"]).stem in right})
               for x in data.get("extra_sides", [])]
 
-    def totals(rows):
+    def totals(rows, n=n):
         # "appeared" counts clips where the correct label was shown at all; the
         # median time is over those only, so it must never be read alone (a
         # side that rarely gets there would otherwise look fast).
@@ -75,9 +79,16 @@ def summarize(data: dict) -> dict:
                    "recorded": x.get("recorded"),
                    "totals": totals([rows[c] for c in labelled if c in rows])}
                   for x, rows in extras],
+        "new_activities": {
+            "clips": len(gpu_only_labelled),
+            "totals": {"right": totals([right[c] for c in gpu_only_labelled], len(gpu_only_labelled)),
+                       **{x["key"]: totals([rows[c] for c in gpu_only_labelled if c in rows],
+                                           len(gpu_only_labelled)) for x, rows in extras}},
+        } if gpu_only_labelled else None,
         "clips": [{"name": c, "expected": right[c].get("expected"),
-                   "featured": c in (data.get("compare") or []),
-                   "left": side(left[c]), "right": side(right[c]),
+                   "featured": c in (data.get("compare") or []) or c in gpu_only_labelled,
+                   "new_activity": c in gpu_only,
+                   "left": side(left[c]) if c in left else None, "right": side(right[c]),
                    "extra": {x["key"]: side(rows[c]) if c in rows else None
-                             for x, rows in extras}} for c in both],
+                             for x, rows in extras}} for c in [*both, *gpu_only]],
     }

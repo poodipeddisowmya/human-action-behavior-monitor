@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -34,5 +34,8 @@ class ActionRecord(Base):
     end_time: Mapped[datetime] = mapped_column(DateTime)
     duration_s: Mapped[float] = mapped_column(Float)
     confidence: Mapped[float] = mapped_column(Float)
+    # JSON list of proof images, relative to data/evidence/ (see
+    # src/storage/evidence.py); NULL when none were taken.
+    evidence: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
 
     person: Mapped["Person"] = relationship(back_populates="actions")

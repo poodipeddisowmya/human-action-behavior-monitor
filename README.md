@@ -103,6 +103,17 @@ Each is a group of Kinetics classes ([target_vocabulary.py](src/action_recogniti
 activity Kinetics already knows is one line there; one it does not know needs
 training on labelled footage.
 
+On a GPU, three more, which the Kinetics model does not know
+([docs/NEW_ACTIVITIES.md](docs/NEW_ACTIVITIES.md)):
+
+`making tea` · `taking tablets` — recognised from a text description by a
+zero-shot video transformer (X-CLIP); adding another is one line of config.
+`falling down` — from the skeleton over time (upright, then lying within a
+second), shown as an alert in the subtitles and the events log.
+
+Every logged activity keeps 2–3 proof images of the person (start, middle,
+end), shown in the events table.
+
 Plus body posture and motion from skeleton geometry, which works even when no
 target activity is in view:
 

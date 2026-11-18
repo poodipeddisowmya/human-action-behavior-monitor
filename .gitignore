@@ -47,3 +47,11 @@ Thumbs.db
 # TensorRT engines are built per device (scripts/build_trt_engines.py)
 models/*.engine
 models/*.onnx
+
+# Third-party test clips for the new activities (Mixkit / Wikimedia licences
+# do not allow re-sharing the raw files in a public repo): kept local only.
+data/new-activities/
+
+# Proof images of people from the events log (src/storage/evidence.py):
+# personal data, never committed.
+data/evidence/

@@ -56,11 +56,21 @@ def main() -> None:
     # HD stock footage added to the library (expected label is in the name).
     for f in sorted((APP / "data" / "samples").glob("hd-*.mp4")):
         EXPECTED[f.name] = f.stem.split("-")[1]
-    clips = [c for c in [*EXPECTED, *CROWD] if (APP / "data" / "samples" / c).exists()]
+    # Activities added after Kinetics (making tea, taking tablets, falling
+    # down), on third-party clips in data/new-activities (same list as
+    # scripts/record_showcase.py, which the Jetson records with).
+    sys.path.insert(0, str(APP / "scripts"))
+    from record_showcase import NEW_ACTIVITY_CLIPS
+    EXPECTED.update(NEW_ACTIVITY_CLIPS)
+
+    def path(c: str) -> str:
+        return f"data/new-activities/{c}" if c in NEW_ACTIVITY_CLIPS else f"data/samples/{c}"
+
+    clips = [c for c in [*EXPECTED, *CROWD] if (APP / path(c)).exists()]
     OUT.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
     subprocess.run([PY, "scripts/process_video.py",
-                    *[f"data/samples/{c}" for c in clips],
+                    *[path(c) for c in clips],
                     "--out", str(OUT), "--min-seconds", str(SECONDS), "--max-width", "1280"],
                    cwd=APP, env={**os.environ, "PYTHONIOENCODING": "utf-8"}, check=False)
 

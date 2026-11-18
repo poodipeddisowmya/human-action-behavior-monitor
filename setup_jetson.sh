@@ -49,16 +49,18 @@ SP=$(.venv/bin/python -c "import sysconfig;print(sysconfig.get_paths()['purelib'
 for p in /usr/lib/python3.10/dist-packages/tensorrt*; do ln -sfn "$p" "$SP/$(basename "$p")"; done
 .venv/bin/python -c "import tensorrt as t; print('  TensorRT', t.__version__)"
 
-say "4/6  Model weights (CLIP, VideoMAE, SmolVLM2)"
+say "4/6  Model weights (CLIP, VideoMAE, SmolVLM2, X-CLIP)"
 export HF_HUB_OFFLINE=0
 .venv/bin/python - <<'EOF'
 from transformers import (CLIPModel, CLIPProcessor, VideoMAEForVideoClassification,
-                          VideoMAEImageProcessor, AutoModelForImageTextToText, AutoProcessor)
+                          VideoMAEImageProcessor, AutoModelForImageTextToText, AutoProcessor,
+                          XCLIPModel, XCLIPProcessor)
 for M, P, c in [(CLIPModel, CLIPProcessor, "openai/clip-vit-base-patch32"),
                 (VideoMAEForVideoClassification, VideoMAEImageProcessor,
                  "MCG-NJU/videomae-base-finetuned-kinetics"),
                 (AutoModelForImageTextToText, AutoProcessor,
-                 "HuggingFaceTB/SmolVLM2-500M-Video-Instruct")]:
+                 "HuggingFaceTB/SmolVLM2-500M-Video-Instruct"),
+                (XCLIPModel, XCLIPProcessor, "microsoft/xclip-base-patch16-zero-shot")]:
     M.from_pretrained(c); P.from_pretrained(c); print("  ready:", c)
 EOF
 
