@@ -106,13 +106,17 @@ def _list_cameras() -> list[dict]:
     global _cameras
     if _cameras is not None:
         return _cameras
-    if not settings.probe_cameras:
-        # Headless server: nothing to find, and each probe costs ~1 s.
-        _cameras = []
-        return _cameras
     in_use = None
     if runtime.source is not None and is_camera(getattr(runtime.source, "current", "")):
         in_use = int(str(runtime.source.current)[len(CAMERA_PREFIX):])
+    if not settings.probe_cameras:
+        # Headless server: each probe costs ~1 s and usually finds nothing.
+        # A camera it was started on (--source 0) is still listed, so the UI
+        # shows it as playing and can switch back to it from a clip.
+        _cameras = [] if in_use is None else [{
+            "filename": f"{CAMERA_PREFIX}{in_use}", "name": "USB camera",
+            "description": "Live camera"}]
+        return _cameras
     found = []
     for i in range(4):
         if i == in_use:

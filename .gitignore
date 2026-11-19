@@ -58,3 +58,4 @@ data/evidence/
 
 # Enrolled faces (src/identity/): biometric data, never committed.
 data/faces/
+data/samples/new-*
