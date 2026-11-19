@@ -84,6 +84,15 @@ export default function SourceSelector() {
               )}
             </optgroup>
           )}
+          {/* Started from the command line (run_pipeline.py --source <file>):
+              not in either list, and without this the browser showed the
+              first option ("Camera 1") as if it were playing. */}
+          {current && !isLive(current) && !current.startsWith("camera:")
+            && !clips.some((c) => c.filename === current) && (
+            <optgroup label="Now playing">
+              <option value={current} disabled>{current.split(/[\\/]/).pop()}</option>
+            </optgroup>
+          )}
           <optgroup label="Video clips">
             {clips.map((c) => (
               <option key={c.filename} value={c.filename} title={c.description}>

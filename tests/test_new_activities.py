@@ -74,6 +74,7 @@ def _recognizer(threshold=0.35, min_hits=2) -> OpenVocabRecognizer:
     r.enabled, r.threshold, r.min_hits, r.hold_s = True, threshold, min_hits, 4.0
     r._ready = True
     r.thresholds = {a: threshold for a in r.activities}
+    r.strong = 0.5
     import threading
     r._states, r._lock = {0: _State()}, threading.Lock()
     return r
@@ -81,9 +82,9 @@ def _recognizer(threshold=0.35, min_hits=2) -> OpenVocabRecognizer:
 
 def test_open_vocab_needs_repeated_looks():
     r = _recognizer()
-    r._vote(0, {"taking tablets": 0.6, "making tea": 0.01})
-    assert r.current(1, single_person=True) is None        # one look is not enough
-    r._vote(0, {"taking tablets": 0.5, "making tea": 0.02})
+    r._vote(0, {"taking tablets": 0.45, "making tea": 0.01})
+    assert r.current(1, single_person=True) is None        # one ordinary look is not enough
+    r._vote(0, {"taking tablets": 0.40, "making tea": 0.02})
     p = r.current(1, single_person=True)
     assert p.label == "taking tablets" and 0.5 < p.confidence <= 0.95
 
@@ -100,3 +101,9 @@ def test_open_vocab_off_without_gpu():
     if settings.device.startswith("cuda"):
         return
     assert OpenVocabRecognizer().enabled is False
+
+
+def test_open_vocab_one_strong_look_confirms():
+    r = _recognizer()
+    r._vote(0, {"taking tablets": 0.05, "making tea": 0.78})
+    assert r.current(1, single_person=True).label == "making tea"

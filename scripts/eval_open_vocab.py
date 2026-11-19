@@ -105,6 +105,7 @@ def main() -> None:
     ap.add_argument("--model", default="microsoft/xclip-base-patch32")
     ap.add_argument("--fp16", action="store_true")
     ap.add_argument("--device", default="cuda")
+    ap.add_argument("--span", type=float, default=2.5, help="seconds of video per look")
     args = ap.parse_args()
 
     import torch
@@ -121,7 +122,8 @@ def main() -> None:
 
     out_dir = ROOT / "data" / "new-activities" / "results"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out = out_dir / f"{args.model.split('/')[-1]}{'-fp16' if args.fp16 else ''}.json"
+    out = out_dir / (f"{args.model.split('/')[-1]}{'-fp16' if args.fp16 else ''}"
+                     + (f"-span{args.span:g}" if args.span != 2.5 else "") + ".json")
     results = json.loads(out.read_text()) if out.exists() else {}
 
     times = []
@@ -129,7 +131,7 @@ def main() -> None:
         key = Path(path).name
         if key in results:
             continue
-        wins = windows(path, nf)
+        wins = windows(path, nf, span_s=args.span)
         looks = []
         for clip in wins:
             v = proc(videos=[clip], return_tensors="pt")["pixel_values"].to(args.device, dtype)

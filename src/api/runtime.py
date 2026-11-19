@@ -125,6 +125,7 @@ class Runtime:
                     end_time=event.end_time or datetime.utcnow(),
                     duration_s=event.duration_s,
                     confidence=event.confidence,
+                    identity=event.identity,
                 )
                 s.add(record)
                 await s.flush()                      # assigns record.id

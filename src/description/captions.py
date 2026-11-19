@@ -193,7 +193,8 @@ def _duration(seconds: float | None) -> str:
 def compose_sentence(labels: list[str | None], scene: str | None,
                      details: dict | None = None, posture: str | None = None,
                      group_posture: str | None = None,
-                     duration_s: float | None = None) -> str:
+                     duration_s: float | None = None,
+                     name: str | None = None) -> str:
     """One sentence from the stable label of each person present.
 
     `labels` has one entry per person; None means "present, activity not yet
@@ -215,7 +216,8 @@ def compose_sentence(labels: list[str | None], scene: str | None,
     # A fall is an alert, said first and plainly, whatever else is going on.
     fallen = sum(1 for l in known if l in _FALL)
     if fallen:
-        who = "a person has" if fallen == 1 else f"{_count(fallen)} people have"
+        who = ("a person has" if not (name and n == 1) else f"{name} has") if fallen == 1 \
+            else f"{_count(fallen)} people have"
         rest = n - fallen
         tail = f" {_count(rest).capitalize()} other{'s' if rest != 1 else ''} in view." if rest else ""
         return f"Alert: {who} fallen down{where}.{tail}"
@@ -224,7 +226,9 @@ def compose_sentence(labels: list[str | None], scene: str | None,
             return f"One person{where}; identifying the activity…"
         label = known[0]
         subject = "A person"
-        if posture in _POSTURE_ADJ and label not in _POSTURE:
+        if name:                    # an enrolled person, named by face recognition
+            subject = name
+        elif posture in _POSTURE_ADJ and label not in _POSTURE:
             subject = f"A {_POSTURE_ADJ[posture]} person"
         return f"{subject} is {_phrase(label, details)}{where}{_duration(duration_s)}."
 
@@ -266,6 +270,7 @@ class CaptionComposer:
         self._kept_details: dict[str, str] = {}
         self._kept_posture: str | None = None
         self._posture_frames: deque[tuple[float, Counter]] = deque()
+        self._names: deque[tuple[float, tuple]] = deque()
         self._shown = _STARTING
         self._shown_key: tuple = ()
         self._pending: str | None = None
@@ -279,6 +284,7 @@ class CaptionComposer:
         self._kept_details = {}
         self._kept_posture = None
         self._posture_frames.clear()
+        self._names.clear()
         self._shown = _STARTING
         self._shown_key = ()
         self._pending = None
@@ -386,9 +392,20 @@ class CaptionComposer:
             else:
                 self._main = (label, now, now)
             duration = now - self._main[1]
+        self._names.append((now, tuple(a.get("name") for a in annotations)))
+        while self._names and now - self._names[0][0] > _LABEL_WINDOW_S:
+            self._names.popleft()
+        name = None
+        if people == 1:
+            seen = Counter(ns[0] for _, ns in self._names if len(ns) == 1)
+            if seen:
+                top, k = seen.most_common(1)[0]
+                if top and k >= 0.5 * len(self._names):
+                    name = top
         sentence = compose_sentence(groups + [None] * (people - len(groups)), scene,
                                     details=details, posture=posture,
-                                    group_posture=group_posture, duration_s=duration)
+                                    group_posture=group_posture, duration_s=duration,
+                                    name=name)
         key = (people, tuple(sorted(groups)), scene)
 
         if sentence == self._shown:

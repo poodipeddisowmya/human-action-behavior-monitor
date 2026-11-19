@@ -92,6 +92,8 @@ class OpenVocabRecognizer:
         self.thresholds = {a: float((cfg.get("thresholds") or {}).get(a, self.threshold))
                            for a in self.activities}
         self.min_hits = int(cfg.get("min_hits", 2))
+        # One look this strong confirms on its own (see the config).
+        self.strong = float(cfg.get("strong", 1.01))
         self.hold_s = float(cfg.get("hold_s", 4.0))
         self._states: dict[int, _State] = {}
         self._lock = threading.Lock()
@@ -169,24 +171,44 @@ class OpenVocabRecognizer:
             ps = prompts[n]
             texts += [ps[i % len(ps)] for i in range(self._k)]
         t = self._proc(text=texts, return_tensors="pt", padding=True)
-        self._text = {k: v.to(settings.device) for k, v in t.items()}
+        m = self._model
+        # The descriptions never change, so they are encoded once and X-CLIP's
+        # text encoder is then dropped: ~126 MB less GPU memory on an 8 GB
+        # Jetson, and no 40-prompt text pass on every look. Only the part of
+        # the text side that depends on the video (the prompt generator) runs
+        # per look; the scores are the full model's (checked to fp16 noise).
+        with torch.no_grad():
+            out = m.text_model(**{k: v.to(settings.device) for k, v in t.items()})
+            self._text_embeds = m.text_projection(out[1])
+        m.text_model = None
+        torch.cuda.empty_cache()
         # Warm-up: the first look also compiles kernels.
         dummy = [np.zeros((224, 224, 3), np.uint8)] * self._nf
         self._score(dummy)
 
     def _score(self, clip: list[np.ndarray]) -> dict[str, float]:
-        torch = self._torch
+        """X-CLIP's forward pass with the text side precomputed (see _load)."""
+        torch, m = self._torch, self._model
         v = self._proc(videos=[clip], return_tensors="pt")["pixel_values"]
         v = v.to(settings.device, torch.float16)
         with torch.no_grad():
-            logits = self._model(pixel_values=v, **self._text).logits_per_video[0].float()
+            b, n, c, h, w = v.shape
+            vis = m.vision_model(pixel_values=v.reshape(-1, c, h, w))
+            video = m.visual_projection(vis[1])
+            video = m.mit(video.view(b, n, -1))[1]
+            img = m.prompts_visual_layernorm(vis[0][:, 1:, :]) @ m.prompts_visual_projection
+            img = img.view(b, n, -1, video.shape[-1]).mean(dim=1)
+            text = self._text_embeds.unsqueeze(0).expand(b, -1, -1)
+            text = text + m.prompts_generator(text, img)
+            video = video / video.norm(p=2, dim=-1, keepdim=True)
+            text = text / text.norm(p=2, dim=-1, keepdim=True)
+            logits = torch.einsum("bd,bkd->bk", video, m.logit_scale.exp() * text)[0].float()
         p = torch.softmax(logits.view(len(self._names), self._k).mean(1), -1).cpu().numpy()
-        del v, logits
+        del v, vis, video, img, text, logits
         if self._release:
-            # A look's ~200 MB of activations would otherwise stay reserved
-            # by PyTorch, where the TensorRT person detector cannot use it:
-            # on an 8 GB Jetson that ran the detector out of memory (40
-            # "CUDA error: out of memory" on one crowded clip). A few ms a look.
+            # A look's working memory would otherwise stay reserved by
+            # PyTorch, where the TensorRT person detector cannot use it: on an
+            # 8 GB Jetson that ran the detector out of memory. A few ms a look.
             torch.cuda.empty_cache()
         return {n: float(p[i]) for i, n in enumerate(self._names)}
 
@@ -269,7 +291,7 @@ class OpenVocabRecognizer:
                   f" (top: {top} {scores[top]:.2f})", flush=True)
             bar = self.thresholds.get(best, self.threshold)
             hits = [s[best] for s in st.scores if s[best] >= bar]
-            if len(hits) >= self.min_hits:
+            if len(hits) >= self.min_hits or scores[best] >= self.strong:
                 st.label, st.conf, st.supported_at = best, float(np.mean(hits)), now
                 print(f"[open-vocab] {'scene' if key == _SCENE else f'P{key}'} {best} "
                       f"{len(hits)}/{len(st.scores)} looks, mean {st.conf:.2f}", flush=True)

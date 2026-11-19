@@ -48,7 +48,11 @@ def draw_overlays(frame: np.ndarray, annotations: list[dict],
         # Hershey fonts are ASCII-only: "detecting…" was drawn as
         # "detecting???" on every new person until the model had looked.
         label = str(a.get("label", "-")).replace("…", "...")
-        text = f'P{a["person_id"]:03d}  {label}  {a.get("confidence",0):.0%}'
+        # An enrolled person's name (face recognition) instead of the track
+        # number; Hershey cannot draw non-ASCII, so such letters become "?".
+        who = a.get("name")
+        who = who.encode("ascii", "replace").decode() if who else f'P{a["person_id"]:03d}'
+        text = f'{who}  {label}  {a.get("confidence",0):.0%}'
         (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, scale, stroke)
         label_h = th + pad
 

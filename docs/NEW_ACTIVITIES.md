@@ -22,8 +22,10 @@ activities the system already tracks (eating, drinking, cooking...). The
 softmax over all of them is what stops someone drinking water from scoring as
 taking tablets: the drinking description wins that look.
 
-A label shows when 2 of the last 3 looks reach the activity's bar, and holds
-4 s after the last supporting look. One look a second, in its own thread:
+A label shows when 2 of the last 3 looks reach the activity's bar, or at
+once on a single look of 0.5 or more (no look of any other clip ever scored
+above 0.23 for tea or 0.14 for tablets; without it tea first showed 5-9 s
+into a clip), and holds 4 s after the last supporting look. One look a second, in its own thread:
 the video and the other models never wait for it. GPU only.
 
 **Adding an activity is one entry** in `config/model_config.yaml`:
@@ -56,27 +58,45 @@ Score of the activity, per look, on 47 clips:
 | Taking tablets | 0.43–0.65 (90th pct) | 0.14 (a drinking clip) | 0 of 45 clips |
 | Making tea | 0.63–0.87 | 0.23 (a cooking clip) | 0 of 44 clips |
 
+X-CLIP's text side only depends on the descriptions, so they are encoded
+once at start-up and its text encoder is dropped: identical scores (to
+0.0001), peak GPU memory 582 MB -> 462 MB.
+
 The smaller `xclip-base-patch32` was tried first: 4x faster (78 ms a look)
 but tablets scored 0.18–0.33 against 0.20 for a drinking clip, no margin.
 The zero-shot model costs 313 ms and 582 MB a look on the Orin Nano (FP16).
 
-Through the full pipeline on the Jetson (`scripts/record_showcase.py`, all
-38 showcase clips, 2026-11-18):
+Through the full pipeline, all 38 showcase clips, 2026-11-18: the Jetson
+(`scripts/record_showcase.py`) and a Kaggle Tesla T4
+(`scripts/kaggle_auto.py showcase`). Correct label on screen, and when it
+first appeared:
 
-| Clip | Activity | On screen | First shown |
+| Clip | Activity | Tesla T4 | Jetson Orin Nano |
 |---|---|---|---|
-| Elderly man takes pills with water | taking tablets | 64% | 4.6 s |
-| Young woman takes pills with water | taking tablets | 21% | 8.8 s |
-| Man making chai at a stall | making tea | 59% | 5.1 s |
-| Tea brewed in an urn | making tea | 25% | 9.0 s |
-| Moroccan tea made outdoors | making tea | 44% | 4.9 s |
-| Man falls in the snow | falling down | 53% | 2.5 s |
+| Elderly man takes pills with water | taking tablets | 55% · 5.6 s | 59% · 5.3 s |
+| Young woman takes pills with water | taking tablets | 0% · — | 20% · 9.0 s |
+| Man making chai at a stall | making tea | 50% · 6.2 s | 68% · 4.0 s |
+| Tea brewed in an urn | making tea | 31% · 7.7 s | 47% · 6.4 s |
+| Moroccan tea made outdoors | making tea | 38% · 3.8 s | 67% · 3.2 s |
+| Man falls in the snow | falling down | 51% · 2.4 s | 51% · 2.3 s |
+
+(Final recording, 2026-11-19, with the strong-look rule; the comparison
+tab shows these.)
+
+Every new activity is recognised on both GPUs except the young woman's
+tablets on the T4 in this run (16% the run before): she takes the pill in
+the first two seconds, before X-CLIP has a full look. Shares differ by
+run-to-run timing (when X-CLIP's looks land against the moment the pill
+goes in). The comparison tab shows these with a NEW badge; the laptop CPU
+did not record them.
 
 None of the other 32 clips was labelled with a new activity at any moment.
-The 29 labelled ones score as before (23/29 clearly recognised, 70% correct
-on screen, 0.9% wrong; the T4 scores the same), but on the Orin Nano the
-first label comes ~0.6 s later: X-CLIP shares its small GPU with the
-activity model. See [JETSON.md](JETSON.md).
+The 29 labelled ones score as before on both GPUs (final run: 21/29 T4,
+22/29 Jetson clearly recognised; 65% / 68% correct on screen; 0.5% / 0.8%
+wrong). On the Orin
+Nano the first label comes ~0.6 s later, because X-CLIP shares its small GPU
+with the activity model; on the T4, per-clip times are unchanged. See
+[JETSON.md](JETSON.md).
 
 **Weakest: taking tablets on the young woman (21%).** She takes the pill in
 the first two seconds, before X-CLIP has a full 2.5 s look; what follows is

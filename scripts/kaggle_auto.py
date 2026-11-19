@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -37,7 +38,13 @@ DEMO_SLUG = "ham-gpu-demo"
 
 
 def kaggle(*args: str, check: bool = True, capture: bool = False) -> subprocess.CompletedProcess:
-    exe = shutil.which("kaggle", path=str(Path(sys.executable).parent))
+    # KAGGLE_CLI, or the one beside this Python, or any on PATH. The Jetson's
+    # Python 3.10 only gets kaggle 1.7, which cannot use the new KGAT_ tokens;
+    # there the current CLI runs from its own environment (uv tool install
+    # --python 3.12 kaggle --with six), found on PATH.
+    exe = (os.environ.get("KAGGLE_CLI")
+           or shutil.which("kaggle", path=str(Path(sys.executable).parent))
+           or shutil.which("kaggle"))
     cmd = [exe, *args] if exe else [sys.executable, "-m", "kaggle", *args]
     print("  $ kaggle " + " ".join(args), flush=True)
     return subprocess.run(cmd, check=check, text=True,
@@ -45,6 +52,8 @@ def kaggle(*args: str, check: bool = True, capture: bool = False) -> subprocess.
 
 
 def ensure_cli() -> None:
+    if os.environ.get("KAGGLE_CLI") or shutil.which("kaggle"):
+        return
     try:
         import kaggle  # noqa: F401
     except ImportError:

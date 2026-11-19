@@ -247,7 +247,7 @@ export default function Compare() {
                       {pct(t.mean_share)} on screen
                     </>
                   ) : (
-                    <span className="text-muted">not recorded yet</span>
+                    <span className="text-muted">not recorded</span>
                   )}
                 </span>
               );

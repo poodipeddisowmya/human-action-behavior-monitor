@@ -5,6 +5,7 @@ import PersonDetail from "./PersonDetail";
 import EventFeed from "./EventFeed";
 import { api, EventMessage, PersonSummary } from "../services/api";
 import { useWebSocket } from "../hooks/useWebSocket";
+import KnownPeople from "./KnownPeople";
 
 export default function Dashboard() {
   const [persons, setPersons] = useState<PersonSummary[]>([]);
@@ -40,6 +41,7 @@ export default function Dashboard() {
       </section>
 
       <aside className="col-span-12 xl:col-span-4 space-y-6">
+        <KnownPeople />
         <PersonList persons={persons} selected={selected} onSelect={setSelected} />
         {selected && <PersonDetail personId={selected} />}
       </aside>
