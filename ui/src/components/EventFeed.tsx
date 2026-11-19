@@ -43,7 +43,11 @@ export default function EventFeed({ events, onSelect }: Props) {
                 onClick={() => onSelect(e.person_id)}
                 className="hover:bg-surface cursor-pointer"
               >
-                <td className="px-4 py-2 font-mono">{e.person_id}</td>
+                <td className="px-4 py-2">
+                  {e.identity
+                    ? <><div className="font-medium">{e.identity}</div><div className="font-mono text-[11px] text-muted">{e.person_id}</div></>
+                    : <span className="font-mono">{e.person_id}</span>}
+                </td>
                 <td className={clsx("px-4 py-2 capitalize", SEVERITY[e.label])}>
                   {e.label.replace("_", " ")}
                 </td>

@@ -192,13 +192,17 @@ class Settings(BaseModel):
     # transformer (open_vocab: in model_config.yaml; src/action_recognition/
     # open_vocab.py). GPU only; OPEN_VOCAB=0 turns it off.
     open_vocab: dict = Field(default_factory=dict)
+    # Face recognition of enrolled people (face_id: in model_config.yaml;
+    # src/identity/face_id.py). FACE_ID=0 turns it off.
+    face_id: dict = Field(default_factory=dict)
 
 
 @lru_cache
 def _load() -> Settings:
     with (ROOT / "config" / "model_config.yaml").open("r", encoding="utf-8") as f:
         raw = yaml.safe_load(f)
-    s = Settings(model=ModelConfig(**raw["model"]), open_vocab=raw.get("open_vocab") or {})
+    s = Settings(model=ModelConfig(**raw["model"]), open_vocab=raw.get("open_vocab") or {},
+                 face_id=raw.get("face_id") or {})
     if s.device.startswith("cuda"):
         # On a GPU the speed/responsiveness trade-offs made for the CPU no
         # longer apply: look at the activity far more often (labels confirm
@@ -238,6 +242,8 @@ def _load() -> Settings:
     for flag in ("DETECTOR_ENGINE", "DEEP_HALF", "CLIP_HALF"):
         if os.getenv(flag):
             setattr(s.model, flag.lower(), _env_bool(flag))
+    if os.getenv("FACE_ID"):
+        s.face_id["enabled"] = _env_bool("FACE_ID")
     if os.getenv("OPEN_VOCAB"):
         s.open_vocab["enabled"] = _env_bool("OPEN_VOCAB")
     if os.getenv("LABEL_MIN_DWELL_S"):

@@ -62,14 +62,14 @@ Same 29 labelled clips, 12 s each, scored on what the screen showed
 (`scripts/build_showcase.py` rules). Laptop CPU and T4 from
 `data/showcase/showcase.json`; Jetson recorded here.
 
-| | Laptop CPU | Tesla T4 | Jetson, T4 settings | Jetson, optimised | Jetson, per-person fix | **Jetson, current** |
-|---|---:|---:|---:|---:|---:|---:|
-| Clearly recognised (correct label ≥ half the time) | 1/29 | 23/29 | 23/29 | 22/29 | 24/29 | **23/29** |
-| Correct label on screen, average | 4% | 70% | 72% | 69% | 73% | **70%** |
-| Wrong activity on screen, average | 0.3% | 0.9% | 1.2% | 2.0% | 0.6% | **0.9%** |
-| Correct label first appeared (median) | 1.4 s | 1.2 s | 1.8 s | 1.0 s | 1.3 s | 1.9 s |
-| Playback FPS (median; capped at each clip's own rate) | 17.5 | 24.0 | 22.8 | 22.8 | 22.6 | 22.4 |
-| Failed model looks during the run | – | – | 2 | 0 | 0 | 3 of 1,048 |
+| | Laptop CPU | Tesla T4 | Jetson, T4 settings | Jetson, optimised | Jetson, per-person fix | Jetson, new activities | **Jetson, final** |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Clearly recognised (correct label ≥ half the time) | 1/29 | 23/29 | 23/29 | 22/29 | 24/29 | 23/29 | **22/29** |
+| Correct label on screen, average | 4% | 70% | 72% | 69% | 73% | 70% | **68%** |
+| Wrong activity on screen, average | 0.3% | 0.9% | 1.2% | 2.0% | 0.6% | 0.9% | **0.8%** |
+| Correct label first appeared (median) | 1.4 s | 1.2 s | 1.8 s | 1.0 s | 1.3 s | 1.9 s | 2.1 s |
+| Playback FPS (median; capped at each clip's own rate) | 17.5 | 24.0 | 22.8 | 22.8 | 22.6 | 22.4 | 22.2 |
+| Failed model looks during the run | – | – | 2 | 0 | 0 | 3 of 1,048 | 2 of 1,041 |
 
 *Per-person fix* is *optimised* plus the per-person label fix below
 (2026-11-17). *Current* adds the new activities (making tea, taking tablets,
@@ -82,6 +82,20 @@ the Orin Nano's GPU with the activity model, and the first correct label
 comes about 0.6 s later (measured in two runs). `OPEN_VOCAB=0` removes it,
 and the new activities with it. The laptop CPU's low wrong-activity figure is
 because it rarely shows any activity at all.
+
+*Final* (2026-11-19) adds the strong-look rule for the new activities,
+X-CLIP without its text encoder (120 MB less GPU memory) and face
+recognition (CPU), and is the Jetson side of the comparison tab. The 1-2
+clip moves between the last three columns are run-to-run: clips such as
+`demo-cycling` and `demo-basic-walk` sit right at the 50% "clearly" bar.
+
+**The T4 with the same code** (re-recorded on Kaggle 2026-11-18 and again
+2026-11-19, the GPU side of the comparison tab now): 23/29 then 21/29
+clearly recognised, 67% / 65% on screen, 0.3% / 0.5% wrong, 23.5 FPS. Its
+per-clip first-label times are unchanged from the original T4 recording
+(cooking 1.2 s, using computer 1.3 s); the median moved to ~2 s only
+because a different set of clips showed the label at all. So the ~0.6 s
+cost above is the Orin Nano's small GPU, not the new layers.
 
 - **One person's activity is no longer copied onto everyone.** With several
   people in view, a person the activity model had not confirmed anything

@@ -1,7 +1,61 @@
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { ChevronLeft, ChevronRight, ImageOff, X } from "lucide-react";
-import { EventMessage } from "../services/api";
+import { ChevronLeft, ChevronRight, ImageOff, UserCheck, X } from "lucide-react";
+import { api, EventMessage, KnownPerson } from "../services/api";
+import { knownPeopleChanged } from "./KnownPeople";
+
+// Name the face in this proof image: an enrolled person, or a new one.
+function EnrolFace({ event, index }: { event: EventMessage; index: number }) {
+  const [people, setPeople] = useState<KnownPerson[]>([]);
+  const [choice, setChoice] = useState<string>("");
+  const [newName, setNewName] = useState("");
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { api.knownPeople().then(setPeople).catch(() => {}); }, []);
+  if (event.id == null) return null;
+
+  const enrol = async () => {
+    setBusy(true); setMsg(null);
+    let created: KnownPerson | null = null;
+    try {
+      let id = Number(choice);
+      if (choice === "new") {
+        created = await api.addKnownPerson(newName.trim());
+        id = created.id;
+      }
+      await api.enrolFromEvidence(id, event.id!, index);
+      const who = created?.name ?? people.find((p) => p.id === id)?.name;
+      setMsg({ ok: true, text: `Enrolled as ${who}. They will be named from now on.` });
+      knownPeopleChanged.dispatchEvent(new Event("changed"));
+    } catch (e) {
+      if (created) await api.deleteKnownPerson(created.id).catch(() => {});   // nothing enrolled: undo
+      setMsg({ ok: false, text: (e as Error).message });
+    }
+    setBusy(false);
+  };
+  const ready = choice && (choice !== "new" || newName.trim());
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-t border-border px-4 py-2 text-xs">
+      <UserCheck size={14} className="text-muted" />
+      <span className="text-muted">This face is</span>
+      <select value={choice} onChange={(e) => setChoice(e.target.value)}
+        className="rounded border border-border bg-surface px-2 py-1 outline-none focus:border-accent">
+        <option value="">choose…</option>
+        {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+        <option value="new">new person…</option>
+      </select>
+      {choice === "new" && (
+        <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Name"
+          className="w-32 rounded border border-border bg-surface px-2 py-1 outline-none focus:border-accent" />
+      )}
+      <button onClick={enrol} disabled={!ready || busy}
+        className="rounded bg-accent/90 px-2.5 py-1 font-medium text-white disabled:opacity-40">
+        {busy ? "Enrolling…" : "Enrol face"}
+      </button>
+      {msg && <span className={msg.ok ? "text-good" : "text-warn"}>{msg.text}</span>}
+    </div>
+  );
+}
 
 // Proof images of one logged activity: the start, the middle and the end of
 // it, as saved by the pipeline (src/storage/evidence.py).
@@ -60,7 +114,9 @@ export default function EvidenceViewer({ event, start, onClose }: {
       <div className="card w-full max-w-3xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
           <div className="min-w-0 text-sm">
-            <span className="font-mono">{event.person_id}</span>
+            {event.identity
+              ? <><span className="font-semibold">{event.identity}</span> <span className="font-mono text-muted">({event.person_id})</span></>
+              : <span className="font-mono">{event.person_id}</span>}
             <span className="mx-2 text-muted">·</span>
             <span className="font-medium capitalize">{event.label}</span>
             <span className="mx-2 text-muted">·</span>
@@ -99,6 +155,7 @@ export default function EvidenceViewer({ event, start, onClose }: {
           <span>{stage ? `${stage[0].toUpperCase()}${stage.slice(1)} of the activity` : "Proof image"}</span>
           <span className="tabular-nums">{i + 1} / {urls.length}</span>
         </div>
+        {!failed && <EnrolFace event={event} index={i} />}
       </div>
     </div>
   );

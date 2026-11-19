@@ -152,7 +152,12 @@ open_vocab:
                            # live, X-CLIP ranked tablets first at 0.21-0.31
                            # on a woman taking pills (making tea keeps 0.35:
                            # a cooking clip reached 0.23)
-  min_hits: 2              # of the last 3 looks, before the label shows
+  min_hits: 2              # of the last 3 looks, before the label shows...
+  strong: 0.5              # ...or one look this strong. Across ~300 looks of
+                           # clips showing neither, no look scored above 0.14
+                           # (tablets) or 0.23 (tea); real tea looks are mostly
+                           # 0.5-0.9. Without it, tea first showed 5-9 s into a
+                           # clip (2.5 s of video, then 2 of 3 looks at 1/s).
   hold_s: 4.0              # keeps showing this long after the last supporting look
   activities:
     making tea:
@@ -161,3 +166,17 @@ open_vocab:
     taking tablets:
       - taking a pill
       - a person taking a tablet and swallowing medicine with water
+
+# Face recognition: names tracked people who were enrolled (with consent) in
+# the dashboard's Known people panel; everyone else stays "Unknown". OpenCV
+# Zoo's YuNet (MIT) + SFace (Apache-2.0), on the CPU, in its own thread.
+# Measured on the Jetson (4 people, 14 s each): same person 0.45-0.96 cosine
+# on clear faces, different people at most 0.27. See src/identity/face_id.py.
+face_id:
+  enabled: true
+  threshold: 0.363         # SFace's published cosine bar for "same person"
+  margin: 0.05             # and ahead of the next enrolled person by this
+  min_quality: 0.85        # face detection score; below it a look is skipped
+  min_face_px: 40          # face width; smaller faces are skipped
+  look_interval_s: 0.5     # per person, until named (2 of 3 looks must agree)
+  recheck_s: 4.0           # per person, once named

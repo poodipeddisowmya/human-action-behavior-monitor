@@ -55,3 +55,6 @@ data/new-activities/
 # Proof images of people from the events log (src/storage/evidence.py):
 # personal data, never committed.
 data/evidence/
+
+# Enrolled faces (src/identity/): biometric data, never committed.
+data/faces/

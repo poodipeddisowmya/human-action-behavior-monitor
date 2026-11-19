@@ -10,7 +10,8 @@ webcam — the server's own, or the viewer's own browser webcam.
 [Client demo on Kaggle's free GPU](docs/KAGGLE_DEMO.md) ·
 [Production deployment (Docker)](docs/DEPLOYMENT.md) ·
 [Windows GPU machine](docs/GPU_DEMO.md) ·
-[NVIDIA Jetson](docs/JETSON.md)
+[NVIDIA Jetson](docs/JETSON.md) ·
+[Client demo on the Jetson](docs/CLIENT_DEMO.md)
 
 ---
 
@@ -113,6 +114,11 @@ second), shown as an alert in the subtitles and the events log.
 
 Every logged activity keeps 2–3 proof images of the person (start, middle,
 end), shown in the events table.
+
+**Face recognition** names enrolled people ("Ramesh is taking tablets"):
+enrol them with a few photos in the Known people panel, or straight from a
+proof image; everyone else stays Unknown. With consent only — see
+[docs/FACE_RECOGNITION.md](docs/FACE_RECOGNITION.md).
 
 Plus body posture and motion from skeleton geometry, which works even when no
 target activity is in view:

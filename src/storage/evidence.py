@@ -101,7 +101,7 @@ class EvidenceCollector:
         self._lock = threading.Lock()
 
     def observe(self, person_id: int, label: str, confidence: float,
-                frame: np.ndarray, xyxy) -> None:
+                frame: np.ndarray, xyxy, name: str | None = None) -> None:
         if not self.enabled or not label or label.startswith(_SKIP):
             return
         now = time.monotonic()
@@ -112,7 +112,9 @@ class EvidenceCollector:
             if now - t.last_shot < self.interval_s:
                 return
             t.last_shot = now
-        shot = render_shot(frame, xyxy, f"P{person_id:03d}", label, datetime.now(), confidence)
+        who = f"{name} (P{person_id:03d})" if name else f"P{person_id:03d}"
+        shot = render_shot(frame, xyxy, who.encode("ascii", "replace").decode(), label,
+                           datetime.now(), confidence)
         if shot is None:
             return
         with self._lock:

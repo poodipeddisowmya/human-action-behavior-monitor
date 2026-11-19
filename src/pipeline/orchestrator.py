@@ -20,6 +20,7 @@ from src.input import VideoSource
 from src.input.video_source import is_live
 from src.action_recognition.fall_detector import FallDetector
 from src.action_recognition.open_vocab import OpenVocabRecognizer
+from src.identity.face_id import FaceIdentifier
 from src.storage.evidence import EvidenceCollector
 from src.temporal import EventGenerator, TemporalSmoother
 from src.temporal.event_generator import ActionEvent
@@ -56,6 +57,9 @@ class Pipeline:
         # Upright -> lying within a second or so, and staying down
         # (src/action_recognition/fall_detector.py). Outranks every label.
         self._falls = FallDetector()
+        # Who each person is, if enrolled (src/identity/face_id.py); public so
+        # the API can hand it a new gallery after an enrolment.
+        self.faces = FaceIdentifier()
         # Smoothing: small window kills flicker; low floor because the deep
         # classifier already applies its own confidence bar upstream.
         self._smoother = TemporalSmoother(window=3, min_confidence=0.4)
@@ -176,6 +180,7 @@ class Pipeline:
         """Attach the event's proof shots, then hand it on."""
         try:
             event.evidence = self._evidence.take(event.person_id, event.label)
+            event.identity = self.faces.name(event.person_id)
         except Exception as e:                   # proof is optional, the event is not
             log.warning(f"evidence for {event.label} not taken: {e}")
         self._on_event(event)
@@ -192,6 +197,7 @@ class Pipeline:
         self._evidence.reset()
         self._open_vocab.reset()
         self._falls.reset()
+        self.faces.reset()
         for pid in list(self._last_ids):
             self._smoother.reset(pid)
             self._stabilizer.reset(pid)
@@ -404,6 +410,7 @@ class Pipeline:
             ov = self._open_vocab.current(t.person_id, len(tracks) == 1)
             if ov is not None and (pred is None or not pred.label.startswith("falling")):
                 pred = ov
+            self.faces.observe(t.person_id, image, t.xyxy)
             fall = self._falls.update(t.person_id, t.xyxy, t.keypoints,
                                       timestamp if timestamp is not None else time.monotonic())
             if fall is not None:
@@ -423,11 +430,13 @@ class Pipeline:
                     self._events.update(t.person_id, smoothed, datetime.utcnow())
                     # After update(): a label change has just closed the old
                     # event, which took its own shots first.
-                    self._evidence.observe(t.person_id, label, conf, image, t.xyxy)
+                    self._evidence.observe(t.person_id, label, conf, image, t.xyxy,
+                                           self.faces.name(t.person_id))
 
             annotations.append({
                 "xyxy": t.xyxy,
                 "person_id": t.person_id,
+                "name": self.faces.name(t.person_id),
                 "label": label,
                 "confidence": conf,
                 # Caption context (see VideoMAEClassifier.update).
@@ -439,6 +448,7 @@ class Pipeline:
             self._events.close_person(gone)
             self._evidence.forget(gone)
             self._open_vocab.forget(gone)
+            self.faces.forget(gone)
             self._smoother.reset(gone)
             self._stabilizer.reset(gone)
         self._last_ids = active

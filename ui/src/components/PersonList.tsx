@@ -12,15 +12,25 @@ interface Props {
 
 export default function PersonList({ persons, selected, onSelect }: Props) {
   const [q, setQ] = useState("");
+  // Track IDs restart with every video or camera session, so the full table
+  // fills up with past sessions' people: show the last 10 minutes by default.
+  const [all, setAll] = useState(false);
+  const recent = useMemo(
+    () => persons.filter(p => Date.now() - new Date(p.last_seen).getTime() < 10 * 60_000),
+    [persons],
+  );
   const filtered = useMemo(
-    () => persons.filter(p => p.id.toLowerCase().includes(q.toLowerCase())),
-    [persons, q],
+    () => (all ? persons : recent).filter(p => p.id.toLowerCase().includes(q.toLowerCase())),
+    [persons, recent, all, q],
   );
 
   return (
     <div className="card">
       <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-        <h2 className="font-semibold">People ({persons.length})</h2>
+        <h2 className="font-semibold">People {all ? `(${persons.length})` : `seen recently (${recent.length})`}</h2>
+        <button onClick={() => setAll(!all)} className="text-xs text-accent hover:underline">
+          {all ? "Recent only" : "Show all"}
+        </button>
       </div>
       <div className="p-3 border-b border-border">
         <div className="relative">
@@ -52,7 +62,9 @@ export default function PersonList({ persons, selected, onSelect }: Props) {
           </li>
         ))}
         {filtered.length === 0 && (
-          <li className="px-4 py-6 text-center text-sm text-muted">No people yet.</li>
+          <li className="px-4 py-6 text-center text-sm text-muted">
+            {all ? "No people yet." : "No one in the last 10 minutes."}
+          </li>
         )}
       </ul>
     </div>

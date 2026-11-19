@@ -56,6 +56,7 @@ async def get_person(external_id: str) -> dict:
                     "duration_s": a.duration_s,
                     "confidence": a.confidence,
                     "evidence": evidence_urls(a),
+                    "identity": a.identity,
                 }
                 for a in actions
             ],

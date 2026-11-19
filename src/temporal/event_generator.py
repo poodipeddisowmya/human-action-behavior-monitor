@@ -24,6 +24,8 @@ class ActionEvent:
     # Proof images (JPEG bytes) attached when the event closes; see
     # src/storage/evidence.py. Not part of to_dict().
     evidence: list[bytes] = field(default_factory=list, repr=False)
+    # The enrolled person face recognition named, if any.
+    identity: str | None = None
 
     @property
     def duration_s(self) -> float:
@@ -43,6 +45,7 @@ class ActionEvent:
             "end_time": utc_iso(self.end_time),
             "duration_s": self.duration_s,
             "confidence": self.confidence,
+            "identity": self.identity,
         }
 
 

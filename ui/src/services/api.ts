@@ -12,6 +12,7 @@ export interface ActionHistoryEntry {
   duration_s: number;
   confidence: number;
   evidence?: string[];       // proof image URLs (start, middle, end)
+  identity?: string | null;  // enrolled person named by face recognition
 }
 
 export interface PersonDetail extends PersonSummary {
@@ -27,6 +28,22 @@ export interface EventMessage {
   duration_s: number;
   confidence: number;
   evidence?: string[];       // proof image URLs (start, middle, end)
+  identity?: string | null;  // enrolled person named by face recognition
+}
+
+// Face recognition gallery (/api/known-people).
+export interface KnownPerson {
+  id: number;
+  name: string;
+  created_at: string;
+  samples: { id: number; quality: number }[];
+}
+
+async function send<T>(url: string, init: RequestInit): Promise<T> {
+  const r = await fetch(url, init);
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body?.detail || `${r.status} ${r.statusText}`);
+  return body as T;
 }
 
 async function json<T>(url: string): Promise<T> {
@@ -122,6 +139,23 @@ export const api = {
 
   metrics: () => json<Metrics>("/api/metrics"),
   showcase: () => json<Showcase>("/api/showcase"),
+  knownPeople: () => json<KnownPerson[]>("/api/known-people"),
+  addKnownPerson: (name: string) => send<KnownPerson>("/api/known-people", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) }),
+  addFacePhotos: (id: number, files: File[]) => {
+    const fd = new FormData();
+    files.forEach((f) => fd.append("files", f));
+    return send<{ added: { id: number }[]; refused: { file: string; reason: string }[] }>(
+      `/api/known-people/${id}/photos`, { method: "POST", body: fd });
+  },
+  enrolFromEvidence: (id: number, eventId: number, index: number) => send<{ id: number }>(
+    `/api/known-people/${id}/from-evidence`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: eventId, index }) }),
+  deleteKnownPerson: (id: number) => send(`/api/known-people/${id}`, { method: "DELETE" }),
+  deleteFacePhoto: (id: number, sampleId: number) =>
+    send(`/api/known-people/${id}/photos/${sampleId}`, { method: "DELETE" }),
+  facePhotoUrl: (id: number, sampleId: number) => `/api/known-people/${id}/photos/${sampleId}`,
   showcaseVideo: (side: string, file: string) =>
     `/api/showcase/video/${side}/${encodeURIComponent(file)}`,
   listSources: () => json<SourcesResponse>("/api/sources"),
