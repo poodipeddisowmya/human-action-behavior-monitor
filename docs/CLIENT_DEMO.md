@@ -8,11 +8,14 @@
    can fail to load (the log says `[open-vocab] load failed ... retrying`).
 2. **Steady power.** `sudo nvpmodel -m 1` (25 W) on the official adapter;
    in MAXN_SUPER the board throttles and has restarted under load.
-3. **Start it:**
+3. **Start it** (recorded clips; `PROBE_CAMERAS=0` hides the camera button):
    ```bash
-   ./run_jetson.sh                                    # demo clips
+   PROBE_CAMERAS=0 ./run_jetson.sh --source data/samples/new-taking-tablets-1.mp4
    ./run_jetson.sh --source 0                         # or the USB camera
    ```
+   The new-activity clips are local copies in `data/samples/new-*`
+   (git-ignored: the stock footage may not be re-shared). Without them the
+   Overview's play buttons are greyed out.
 4. **Open the dashboard on a laptop on the same network:**
    `http://<jetson-ip>:8000` (`hostname -I` on the Jetson). Not through
    remote desktop: it re-encodes the screen and the video stutters.
@@ -21,14 +24,20 @@
 
 ## The demo
 
-| # | Show | Where | Say |
+The dashboard opens on **Overview**: four numbered cards, each with real
+results from this machine and a button that shows it working. Walk them in
+order.
+
+| # | Card | Click | Say |
 |---|---|---|---|
-| 1 | Live detection | Live monitor, a demo clip | Every person is boxed, tracked with an ID, labelled with an activity; the subtitle describes the scene. |
-| 2 | Proof images | Recent events → click a thumbnail | Each logged activity keeps 3 shots of the person — start, middle, end — as evidence. |
-| 3 | Face recognition | Live camera (`--source 0`), you in view | Enrolled people are named: "Asha is using a phone". Strangers stay Unknown. Enrol straight from a proof image: "This face is … → Enrol face". |
-| 4 | New activities | CPU vs GPU tab → the NEW clips | Making tea and taking tablets are defined in words to a video transformer — no training. Falls come from the skeleton: 9 of 9 real falls, no false alarms. |
-| 5 | Why a GPU | CPU vs GPU tab, any clip | Same clips, same software: laptop CPU 1/29 clearly recognised, Tesla T4 and Jetson 23/29, the three videos frame-synced. |
-| 6 | Edge vs cloud | Same tab, Jetson panel | The Jetson matches the cloud T4 at 25 W, on site, with no video leaving the building. |
+| 1 | Same video, three machines | Open the comparison | Same 29 clips, same software: laptop CPU 1/29 clearly recognised, Tesla T4 21/29, Jetson 22/29, the three videos frame-synced. The Jetson matches the cloud GPU, on site, with no video leaving the building. |
+| 2 | New activities, no retraining | Making tea / Taking tablets / Falling down | Tea and tablets are defined in words to a video transformer, no training clips. Falls come from the skeleton and show as an alert in the subtitle and the log. |
+| 3 | Face recognition | See it live, then Manage known people | Enrolled people are named on the box, the subtitle, the log and the photos; everyone else stays Unknown. Enrol with consent, straight from a proof image. |
+| 4 | Every activity logged, with proof photos | Click a photo, then Open the activity log | Each activity keeps photos of the start, middle and end. The log filters to new activities, known people or alerts. |
+
+A fresh log for the day: stop the server, back up `logs/monitor.db`, and
+clear its `actions` and `persons` tables (enrolled people are kept), then
+play each new-activity clip once so every card has photos.
 
 Good camera practice for the live part: 1.5–3 m away, upper body and hands
 in view, light in front of the person, face visible.

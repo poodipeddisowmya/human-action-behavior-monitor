@@ -1,15 +1,24 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { EventMessage } from "../services/api";
 import clsx from "clsx";
+import { EventMessage } from "../services/api";
+import { NEW_LABELS } from "../services/clips";
 import EvidenceViewer, { EvidenceThumbs } from "./EvidenceViewer";
 
+const ALERTS = ["falling down", "falling"];
 const SEVERITY: Record<string, string> = {
   falling: "text-danger font-semibold",
   "falling down": "text-danger font-semibold",
-  lying:   "text-warn",
-  "taking tablets": "text-accent",
+  lying: "text-warn",
 };
+
+type Filter = "all" | "new" | "named" | "alerts";
+const FILTERS: { key: Filter; label: string; test: (e: EventMessage) => boolean }[] = [
+  { key: "all", label: "All", test: () => true },
+  { key: "new", label: "New activities", test: (e) => NEW_LABELS.includes(e.label) },
+  { key: "named", label: "Known people", test: (e) => !!e.identity },
+  { key: "alerts", label: "Alerts", test: (e) => ALERTS.includes(e.label) },
+];
 
 interface Props {
   events: EventMessage[];
@@ -18,53 +27,70 @@ interface Props {
 
 export default function EventFeed({ events, onSelect }: Props) {
   const [open, setOpen] = useState<{ event: EventMessage; index: number } | null>(null);
+  const [filter, setFilter] = useState<Filter>("all");
+  const counts = useMemo(
+    () => Object.fromEntries(FILTERS.map((f) => [f.key, events.filter(f.test).length])) as Record<Filter, number>,
+    [events],
+  );
+  const shown = useMemo(() => events.filter(FILTERS.find((f) => f.key === filter)!.test), [events, filter]);
+
   return (
-    <div className="card">
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-        <h2 className="font-semibold">Recent events</h2>
-        <span className="text-xs text-muted">{events.length}</span>
+    <div id="activity-log" className="card scroll-mt-24">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+        <div>
+          <h2 className="font-semibold">Activity log</h2>
+          <p className="text-xs text-muted">Each activity with who did it and proof photos. Click a photo to open it.</p>
+        </div>
+        <div className="flex flex-wrap gap-1" role="tablist" aria-label="Filter the log">
+          {FILTERS.map((f) => (
+            <button key={f.key} role="tab" aria-selected={filter === f.key} onClick={() => setFilter(f.key)}
+              className={clsx(
+                "rounded-full border px-2.5 py-1 text-xs transition",
+                filter === f.key ? "border-accent bg-accent/15 text-accent" : "border-border text-muted hover:text-slate-100",
+              )}>
+              {f.label} <span className="tabular-nums opacity-70">{counts[f.key]}</span>
+            </button>
+          ))}
+        </div>
       </div>
-      <div className="max-h-[420px] overflow-auto">
+      <div className="max-h-[460px] overflow-auto">
         <table className="w-full text-sm">
-          <thead className="text-left text-xs uppercase text-muted bg-surface sticky top-0">
+          <thead className="sticky top-0 z-10 bg-surface text-left text-xs uppercase text-muted">
             <tr>
               <th className="px-4 py-2 font-medium">Person</th>
-              <th className="px-4 py-2 font-medium">Action</th>
-              <th className="px-4 py-2 font-medium">Start</th>
+              <th className="px-4 py-2 font-medium">Activity</th>
+              <th className="px-4 py-2 font-medium">Started</th>
               <th className="px-4 py-2 font-medium">Duration</th>
-              <th className="px-4 py-2 font-medium">Conf.</th>
+              <th className="px-4 py-2 font-medium">Confidence</th>
               <th className="px-4 py-2 font-medium">Proof</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {events.map((e, i) => (
-              <tr
-                key={e.id ?? i}
-                onClick={() => onSelect(e.person_id)}
-                className="hover:bg-surface cursor-pointer"
-              >
+            {shown.map((e, i) => (
+              <tr key={e.id ?? i} onClick={() => onSelect(e.person_id)}
+                className={clsx("cursor-pointer hover:bg-surface", ALERTS.includes(e.label) && "bg-danger/5")}>
                 <td className="px-4 py-2">
-                  {e.identity
-                    ? <><div className="font-medium">{e.identity}</div><div className="font-mono text-[11px] text-muted">{e.person_id}</div></>
-                    : <span className="font-mono">{e.person_id}</span>}
+                  <div className={e.identity ? "font-medium" : "text-muted"}>{e.identity ?? "Unknown"}</div>
+                  <div className="font-mono text-[11px] text-muted">{e.person_id}</div>
                 </td>
                 <td className={clsx("px-4 py-2 capitalize", SEVERITY[e.label])}>
                   {e.label.replace("_", " ")}
+                  {NEW_LABELS.includes(e.label) && (
+                    <span className="ml-1.5 rounded bg-accent/20 px-1 align-middle text-[10px] font-semibold not-italic text-accent">NEW</span>
+                  )}
                 </td>
-                <td className="px-4 py-2 text-muted font-mono">
-                  {format(new Date(e.start_time), "HH:mm:ss")}
-                </td>
-                <td className="px-4 py-2 text-muted">{e.duration_s.toFixed(1)}s</td>
-                <td className="px-4 py-2 text-muted">{Math.round(e.confidence * 100)}%</td>
+                <td className="px-4 py-2 font-mono text-muted">{format(new Date(e.start_time), "HH:mm:ss")}</td>
+                <td className="px-4 py-2 tabular-nums text-muted">{e.duration_s.toFixed(1)} s</td>
+                <td className="px-4 py-2 tabular-nums text-muted">{Math.round(e.confidence * 100)}%</td>
                 <td className="px-4 py-1.5">
                   <EvidenceThumbs event={e} onOpen={(index) => setOpen({ event: e, index })} />
                 </td>
               </tr>
             ))}
-            {events.length === 0 && (
+            {shown.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-muted">
-                  Waiting for the first event…
+                  {events.length === 0 ? "Waiting for the first activity…" : "Nothing logged of this kind yet."}
                 </td>
               </tr>
             )}

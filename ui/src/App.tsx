@@ -1,22 +1,42 @@
 import { useEffect, useState } from "react";
 import Dashboard from "./components/Dashboard";
 import Compare from "./components/Compare";
+import Overview, { Go } from "./components/Overview";
 import SourceSelector from "./components/SourceSelector";
 import SystemStatus from "./components/SystemStatus";
 import { Activity } from "lucide-react";
 
-type Tab = "live" | "compare";
-const fromHash = (): Tab => (location.hash === "#compare" ? "compare" : "live");
+type Tab = "overview" | "live" | "compare";
+const TABS: { key: Tab; label: string }[] = [
+  { key: "overview", label: "Overview" },
+  { key: "live", label: "Live monitor" },
+  { key: "compare", label: "CPU · T4 · Jetson" },
+];
+// Each view is linkable: #live, #compare; no hash opens the overview.
+const fromHash = (): Tab => {
+  const h = location.hash.slice(1);
+  return h === "compare" || h === "live" ? h : "overview";
+};
 
 export default function App() {
-  // Two views, each linkable: #compare opens the CPU-vs-GPU comparison.
   const [tab, setTab] = useState<Tab>(fromHash);
   useEffect(() => {
     const on = () => setTab(fromHash());
     addEventListener("hashchange", on);
     return () => removeEventListener("hashchange", on);
   }, []);
-  const go = (t: Tab) => { location.hash = t === "compare" ? "compare" : ""; setTab(t); };
+
+  const go: Go = (t, then) => {
+    history.replaceState(null, "", t === "overview" ? location.pathname : `#${t}`);
+    setTab(t);
+    // Jump to a panel of the live monitor once it is shown.
+    const target = then === "log" ? "activity-log" : then === "people" ? "known-people" : null;
+    requestAnimationFrame(() => {
+      if (target) document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      else scrollTo({ top: 0 });
+    });
+  };
+  const open = (t: Tab) => go(t);
 
   const tabClass = (t: Tab) =>
     "px-3 py-1.5 rounded-md text-sm font-medium transition " +
@@ -24,20 +44,24 @@ export default function App() {
 
   return (
     <div className="min-h-full flex flex-col">
-      <header className="border-b border-border bg-elevated">
-        <div className="max-w-[1600px] mx-auto px-6 py-4 flex flex-wrap items-center gap-x-6 gap-y-3">
-          <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-40 border-b border-border bg-elevated/95 backdrop-blur">
+        <div className="max-w-[1600px] mx-auto px-6 py-3 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <button onClick={() => open("overview")} className="flex items-center gap-3 text-left">
             <div className="w-9 h-9 rounded-lg bg-accent/20 border border-accent/40 flex items-center justify-center">
               <Activity size={18} className="text-accent" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold">Human Action & Behavior Monitor</h1>
-              <p className="text-xs text-muted">Real-time detection · tracking · action recognition</p>
+              <h1 className="text-lg font-semibold leading-tight">Human Action & Behavior Monitor</h1>
+              <p className="text-xs text-muted">Activity recognition · face recognition · proof images</p>
             </div>
-          </div>
+          </button>
           <nav className="flex gap-1" aria-label="Views">
-            <button className={tabClass("live")} onClick={() => go("live")}>Live monitor</button>
-            <button className={tabClass("compare")} onClick={() => go("compare")}>CPU vs GPU</button>
+            {TABS.map((t) => (
+              <button key={t.key} className={tabClass(t.key)} onClick={() => open(t.key)}
+                aria-current={tab === t.key ? "page" : undefined}>
+                {t.label}
+              </button>
+            ))}
           </nav>
           <div className="ml-auto flex items-center gap-6">
             {tab === "live" && <SourceSelector />}
@@ -48,8 +72,9 @@ export default function App() {
 
       <main className="flex-1 max-w-[1600px] w-full mx-auto p-6">
         {/* The live view stays mounted so its video and socket are not torn
-            down by a look at the comparison. */}
+            down by a look at the other views. */}
         <div hidden={tab !== "live"}><Dashboard /></div>
+        {tab === "overview" && <Overview go={go} />}
         {tab === "compare" && <Compare />}
       </main>
     </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import VideoStream, { Caption } from "./VideoStream";
 import PersonList from "./PersonList";
 import PersonDetail from "./PersonDetail";
@@ -20,7 +20,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     refreshPersons();
-    api.recentEvents(50).then(setEvents).catch(() => {});
+    api.recentEvents(200).then(setEvents).catch(() => {});
   }, [refreshPersons]);
 
   useWebSocket((msg) => {
@@ -33,6 +33,13 @@ export default function Dashboard() {
     }
   });
 
+  // Track ID -> name, from the newest event that named them.
+  const names = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const e of events) if (e.identity && !(e.person_id in m)) m[e.person_id] = e.identity;
+    return m;
+  }, [events]);
+
   return (
     <div className="grid grid-cols-12 gap-6">
       <section className="col-span-12 xl:col-span-8 space-y-6">
@@ -41,8 +48,8 @@ export default function Dashboard() {
       </section>
 
       <aside className="col-span-12 xl:col-span-4 space-y-6">
-        <KnownPeople />
-        <PersonList persons={persons} selected={selected} onSelect={setSelected} />
+        <div id="known-people" className="scroll-mt-24"><KnownPeople /></div>
+        <PersonList persons={persons} names={names} selected={selected} onSelect={setSelected} />
         {selected && <PersonDetail personId={selected} />}
       </aside>
     </div>
