@@ -31,6 +31,15 @@ export interface EventMessage {
   identity?: string | null;  // enrolled person named by face recognition
 }
 
+// A person in view with a clear face and no name (/api/known-people/on-screen).
+export interface FaceOnScreen {
+  track: number;
+  person_id: string;   // "P006"
+  score: number;
+  width: number;
+  faces: number;       // clear faces held (up to 3)
+}
+
 // Face recognition gallery (/api/known-people).
 export interface KnownPerson {
   id: number;
@@ -155,6 +164,11 @@ export const api = {
   deleteKnownPerson: (id: number) => send(`/api/known-people/${id}`, { method: "DELETE" }),
   deleteFacePhoto: (id: number, sampleId: number) =>
     send(`/api/known-people/${id}/photos/${sampleId}`, { method: "DELETE" }),
+  facesOnScreen: () => json<FaceOnScreen[]>("/api/known-people/on-screen"),
+  faceOnScreenUrl: (track: number, v: number) => `/api/known-people/on-screen/${track}/face?v=${v}`,
+  enrolFromVideo: (id: number, track: number) => send<{ added: { id: number }[]; events_named: number }>(
+    `/api/known-people/${id}/from-video`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ track }) }),
   facePhotoUrl: (id: number, sampleId: number) => `/api/known-people/${id}/photos/${sampleId}`,
   showcaseVideo: (side: string, file: string) =>
     `/api/showcase/video/${side}/${encodeURIComponent(file)}`,

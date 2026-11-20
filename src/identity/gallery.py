@@ -17,9 +17,7 @@ from sqlalchemy.orm import selectinload
 
 from src.storage import FaceSample, KnownPerson, get_session
 
-from .face_id import FaceModels, Gallery, _cfg, best_face, faces_dir
-
-ENROL_MIN_PX = 60          # enrolment photos must show the face at least this wide
+from .face_id import ENROL_MIN_PX, Face, FaceModels, Gallery, _cfg, best_face, faces_dir
 _models: FaceModels | None = None
 
 
@@ -84,6 +82,28 @@ async def add_sample(person_id: int, image_bytes: bytes) -> dict:
     if f is None:
         raise EnrolError(why)
     e, aligned = m.embed(img, f)
+    return await _store(person_id, e, aligned, float(f[-1]))
+
+
+async def add_faces(person_id: int, faces: list[Face]) -> list[dict]:
+    """Enrol faces taken from the video (FaceIdentifier.faces_of), best first.
+
+    The same checks as a photo: the first face must pass them; a later one
+    that does not (an odd angle) is skipped rather than failing the lot.
+    """
+    if not faces:
+        raise EnrolError("no clear face of this person yet: wait until they face the camera")
+    added = [await _store(person_id, faces[0].embedding, faces[0].aligned, faces[0].score)]
+    for f in faces[1:]:
+        try:
+            added.append(await _store(person_id, f.embedding, f.aligned, f.score))
+        except EnrolError:
+            pass
+    return added
+
+
+async def _store(person_id: int, e: np.ndarray, aligned: np.ndarray, quality: float) -> dict:
+    """Check one face embedding against the gallery and store it."""
     gallery = await load_gallery()
     who, sim = gallery.match(e, float(_cfg("threshold", 0.363)), 0.0)
     async with get_session() as s:
@@ -101,8 +121,8 @@ async def add_sample(person_id: int, image_bytes: bytes) -> dict:
             if best_own < float(_cfg("threshold", 0.363)):
                 raise EnrolError(f"this face does not look like the other photos of "
                                  f"{person.name} ({best_own:.2f}): not added")
-        sample = FaceSample(person_id=person_id, embedding=e.tobytes(), image="",
-                            quality=float(f[-1]))
+        sample = FaceSample(person_id=person_id, embedding=e.astype(np.float32).tobytes(), image="",
+                            quality=quality)
         s.add(sample)
         await s.flush()
         rel = f"{person_id}/{sample.id}.jpg"

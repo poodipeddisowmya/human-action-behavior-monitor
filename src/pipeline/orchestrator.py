@@ -410,7 +410,7 @@ class Pipeline:
             ov = self._open_vocab.current(t.person_id, len(tracks) == 1)
             if ov is not None and (pred is None or not pred.label.startswith("falling")):
                 pred = ov
-            self.faces.observe(t.person_id, image, t.xyxy)
+            self.faces.observe(t.person_id, image, t.xyxy, t.keypoints)
             fall = self._falls.update(t.person_id, t.xyxy, t.keypoints,
                                       timestamp if timestamp is not None else time.monotonic())
             if fall is not None:

@@ -5,7 +5,8 @@ import PersonDetail from "./PersonDetail";
 import EventFeed from "./EventFeed";
 import { api, EventMessage, PersonSummary } from "../services/api";
 import { useWebSocket } from "../hooks/useWebSocket";
-import KnownPeople from "./KnownPeople";
+import KnownPeople, { knownPeopleChanged } from "./KnownPeople";
+import FacesOnScreen from "./FacesOnScreen";
 
 export default function Dashboard() {
   const [persons, setPersons] = useState<PersonSummary[]>([]);
@@ -20,7 +21,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     refreshPersons();
-    api.recentEvents(200).then(setEvents).catch(() => {});
+    // Reload the log after an enrolment too: naming someone from the video
+    // also names what they did since they came into view.
+    const load = () => api.recentEvents(200).then(setEvents).catch(() => {});
+    load();
+    knownPeopleChanged.addEventListener("changed", load);
+    return () => knownPeopleChanged.removeEventListener("changed", load);
   }, [refreshPersons]);
 
   useWebSocket((msg) => {
@@ -48,7 +54,7 @@ export default function Dashboard() {
       </section>
 
       <aside className="col-span-12 xl:col-span-4 space-y-6">
-        <div id="known-people" className="scroll-mt-24"><KnownPeople /></div>
+        <div id="known-people" className="scroll-mt-24 space-y-6"><FacesOnScreen /><KnownPeople /></div>
         <PersonList persons={persons} names={names} selected={selected} onSelect={setSelected} />
         {selected && <PersonDetail personId={selected} />}
       </aside>
