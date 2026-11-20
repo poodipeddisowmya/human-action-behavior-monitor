@@ -6,14 +6,16 @@ running pipeline at once (no restart).
 from __future__ import annotations
 
 import json
+from datetime import timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
+from sqlalchemy import select, update
 
 from src.identity import gallery
-from src.storage import ActionRecord, get_session
+from src.storage import ActionRecord, Person, get_session
 from src.storage.evidence import evidence_root
 
 from ..runtime import runtime
@@ -29,6 +31,17 @@ class NewPerson(BaseModel):
 class FromEvidence(BaseModel):
     event_id: int
     index: int = 0
+
+
+class FromVideo(BaseModel):
+    track: int                 # tracking number: 6 for "P006"
+
+
+def _faces():
+    faces = getattr(runtime.pipeline, "faces", None)
+    if faces is None or not faces.enabled:
+        raise HTTPException(503, "face recognition is off")
+    return faces
 
 
 async def refresh() -> None:
@@ -90,6 +103,57 @@ async def add_from_evidence(person_id: int, body: FromEvidence) -> dict:
         _bad(e)
     await refresh()
     return sample
+
+
+@router.get("/on-screen")
+async def on_screen() -> list[dict]:
+    """People in view now with a clear face and no name, for naming.
+
+    Their faces are held in memory only while they are tracked (see
+    src/identity/face_id.py); nothing about them is stored until someone
+    enrols them.
+    """
+    faces = getattr(runtime.pipeline, "faces", None)
+    if faces is None or not faces.enabled:
+        return []
+    return [u | {"person_id": f"P{u['track']:03d}"} for u in faces.unnamed()]
+
+
+@router.get("/on-screen/{track}/face")
+async def on_screen_face(track: int) -> Response:
+    shot = _faces().face_shot(track)
+    if shot is None:
+        raise HTTPException(404, "that person is no longer in view")
+    return Response(shot, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
+@router.post("/{person_id}/from-video")
+async def add_from_video(person_id: int, body: FromVideo) -> dict:
+    """Enrol a person in view from their best faces, name them at once, and
+    put the name on what they have done since they came into view."""
+    faces = _faces()
+    held, since = faces.faces_of(body.track)
+    try:
+        added = await gallery.add_faces(person_id, held)
+    except gallery.EnrolError as e:
+        _bad(e)
+    await refresh()
+    faces.assign(body.track, person_id)
+    named = 0
+    name = faces.gallery.names.get(person_id)
+    if since is not None and name:
+        async with get_session() as s:
+            ext = f"P{body.track:03d}"
+            pid = (await s.execute(select(Person.id).where(Person.external_id == ext))).scalar_one_or_none()
+            if pid is not None:
+                r = await s.execute(update(ActionRecord)
+                                    .where(ActionRecord.person_id == pid,
+                                           ActionRecord.start_time >= since - timedelta(seconds=2),
+                                           ActionRecord.identity.is_(None))
+                                    .values(identity=name))
+                named = r.rowcount or 0
+                await s.commit()
+    return {"added": added, "events_named": named}
 
 
 @router.delete("/{person_id}")

@@ -32,7 +32,7 @@ order.
 |---|---|---|---|
 | 1 | Same video, three machines | Open the comparison | Same 29 clips, same software: laptop CPU 1/29 clearly recognised, Tesla T4 21/29, Jetson 22/29, the three videos frame-synced. The Jetson matches the cloud GPU, on site, with no video leaving the building. |
 | 2 | New activities, no retraining | Making tea / Taking tablets / Falling down | Tea and tablets are defined in words to a video transformer, no training clips. Falls come from the skeleton and show as an alert in the subtitle and the log. |
-| 3 | Face recognition | See it live, then Manage known people | Enrolled people are named on the box, the subtitle, the log and the photos; everyone else stays Unknown. Enrol with consent, straight from a proof image. |
+| 3 | Face recognition | See it live, then Name people on screen | Enrolled people are named on the box, the subtitle, the log and the photos; everyone else stays Unknown. Name anyone in view: switch to a clip with several people (Classroom 4 phone), type a name under their face in Faces on screen, and the box, subtitle and log name them at once. With consent only. |
 | 4 | Every activity logged, with proof photos | Click a photo, then Open the activity log | Each activity keeps photos of the start, middle and end. The log filters to new activities, known people or alerts. |
 
 A fresh log for the day: stop the server, back up `logs/monitor.db`, and

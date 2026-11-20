@@ -258,7 +258,7 @@ export default function Overview({ go }: { go: Go }) {
             <Action primary onClick={() => tabletsClip && play(tabletsClip)} disabled={!tabletsClip || busy !== null}>
               <Play size={13} /> See it live
             </Action>
-            <Action onClick={() => go("live", "people")}><UserRound size={13} /> Manage known people</Action>
+            <Action onClick={() => go("live", "people")}><UserRound size={13} /> Name people on screen</Action>
           </>}>
           {people.length > 0 ? (
             <ul className="space-y-2">
@@ -297,7 +297,9 @@ export default function Overview({ go }: { go: Go }) {
           )}
           <ul className="mt-3 space-y-1 text-xs text-muted">
             <li className="flex gap-2"><PersonStanding size={14} className="shrink-0" />
-              Everyone not enrolled stays <span className="text-slate-300">Unknown</span>: strangers were never named in testing.</li>
+              Anyone else stays <span className="text-slate-300">Unknown</span> until named: type a name under
+              their face in the live monitor's <span className="text-slate-300">Faces on screen</span>, and they are
+              recognised from then on.</li>
             <li className="flex gap-2"><ShieldCheck size={14} className="shrink-0" />
               Enrol only with consent. Face data stays on this device; deleting a person removes all of it.</li>
           </ul>

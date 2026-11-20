@@ -19,6 +19,12 @@ faces < 40 px, head turned down). Hence the rules here:
   * a tracked person is named when 2 of their last 3 clear looks agree, and
     keeps the name; a different name needs 3 agreeing looks in a row.
 
+Naming people from the video: while an unnamed person is tracked, their
+three best clear faces are held in memory, so the dashboard can show "faces
+on screen" and enrol one with a click. They are dropped the moment the
+person leaves the view or the source changes: no gallery of strangers is
+ever written anywhere.
+
 Runs on the CPU in its own thread (~25-80 ms to find faces, ~25 ms an
 embedding on the Orin's CPU), a few looks a second in total: it never holds
 up the video or the GPU models.
@@ -31,6 +37,7 @@ import threading
 import time
 from collections import deque
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 
 import cv2
@@ -41,6 +48,8 @@ from config import settings
 log = logging.getLogger(__name__)
 
 DET_MODEL = "face/face_detection_yunet_2023mar.onnx"
+ENROL_MIN_PX = 60          # a face must be at least this wide to be enrolled
+KEEP_FACES = 3             # best faces held per unnamed person, for naming
 REC_MODEL = "face/face_recognition_sface_2021dec.onnx"
 
 
@@ -115,6 +124,16 @@ class Gallery:
 
 
 @dataclass
+class Face:
+    """One clear face of a tracked person, held in memory for naming."""
+    score: float               # detection score
+    width: int                 # face width in pixels
+    embedding: np.ndarray
+    aligned: np.ndarray        # 112x112, what enrolment stores
+    shot: bytes                # JPEG of the face with some margin, for the dashboard
+
+
+@dataclass
 class _Track:
     votes: deque = field(default_factory=lambda: deque(maxlen=3))   # person id or None
     person: int | None = None
@@ -122,6 +141,8 @@ class _Track:
     challenges: int = 0
     last_look: float = 0.0
     similarity: float = 0.0
+    since: datetime = field(default_factory=datetime.utcnow)       # first seen, UTC
+    faces: list[Face] = field(default_factory=list)                 # best first
 
 
 class FaceIdentifier:
@@ -166,13 +187,16 @@ class FaceIdentifier:
                 t.last_look = 0.0
 
     # -- per frame -----------------------------------------------------------
-    def observe(self, person_id: int, frame: np.ndarray, xyxy) -> None:
-        if not self.enabled or len(self.gallery.embeddings) == 0:
+    def observe(self, person_id: int, frame: np.ndarray, xyxy, keypoints=None) -> None:
+        if not self.enabled:
             return
         now = time.monotonic()
         with self._lock:
             t = self._tracks.setdefault(person_id, _Track())
-            due = self.recheck_s if t.person is not None else self.look_s
+            # Named: an occasional re-check. Unnamed: a few looks a second while
+            # there is someone to match, or until a full set of faces is held.
+            idle = t.person is not None or (len(self.gallery.embeddings) == 0 and len(t.faces) >= KEEP_FACES)
+            due = self.recheck_s if idle else self.look_s
             if now - t.last_look < due:
                 return
             t.last_look = now
@@ -181,25 +205,34 @@ class FaceIdentifier:
         bw, bh = x2 - x1, y2 - y1
         # The head is in the upper part of a person's box; a little margin
         # around it keeps the detector's context.
-        crop = frame[max(0, int(y1 - 0.1 * bh)):min(h, int(y1 + 0.6 * bh)),
-                     max(0, int(x1 - 0.15 * bw)):min(w, int(x2 + 0.15 * bw))]
+        cy, cx = max(0, int(y1 - 0.1 * bh)), max(0, int(x1 - 0.15 * bw))
+        crop = frame[cy:min(h, int(y1 + 0.6 * bh)), cx:min(w, int(x2 + 0.15 * bw))]
         if crop.size == 0 or min(crop.shape[:2]) < self.min_px:
             return
+        # Where this person's head is, in crop coordinates: the crop can also
+        # hold someone else's face (people overlap in a crowd), and that face
+        # must not be taken for theirs.
+        head = _head_point(keypoints)
+        if head is not None:
+            head = (head[0] - cx, head[1] - cy)
+        box = (x1 - cx, y1 - cy, x2 - cx, y2 - cy)
         try:
-            self._jobs.put_nowait((person_id, crop.copy()))
+            self._jobs.put_nowait((person_id, crop.copy(), head, box))
         except queue.Full:
             pass
 
     def _worker(self) -> None:
         while True:
-            pid, crop = self._jobs.get()
+            pid, crop, head, box = self._jobs.get()
             try:
-                f, _ = best_face(self.models, crop, self.min_quality, self.min_px)
-                if f is None:
-                    continue                    # no clear face: not a vote either way
-                e, _ = self.models.embed(crop, f)
+                f = pick_face(self.models.faces(crop), head, box)
+                if f is None or f[-1] < self.min_quality or f[2] < self.min_px:
+                    continue                    # no clear face of theirs: not a vote either way
+                e, aligned = self.models.embed(crop, f)
                 who, sim = self.gallery.match(e, self.threshold, self.margin)
                 self._vote(pid, who, sim)
+                if f[2] >= ENROL_MIN_PX:
+                    self._keep(pid, Face(float(f[-1]), int(f[2]), e, aligned, _shot(crop, f)))
             except Exception as ex:
                 print(f"[face-id] look failed: {ex}", flush=True)
 
@@ -222,6 +255,55 @@ class FaceIdentifier:
             elif who == t.person:
                 t.challenger, t.challenges, t.similarity = None, 0, max(t.similarity, sim)
 
+    def _keep(self, pid: int, face: Face) -> None:
+        """Hold the best few faces of an unnamed person; near-duplicates of a
+        face already held only replace it when they are clearer."""
+        with self._lock:
+            t = self._tracks.get(pid)
+            if t is None or t.person is not None:
+                if t is not None:
+                    t.faces.clear()
+                return
+            rank = lambda x: x.score * min(x.width, 120)
+            for i, old in enumerate(t.faces):
+                if float(old.embedding @ face.embedding) > 0.92:
+                    if rank(face) > rank(old):
+                        t.faces[i] = face
+                    break
+            else:
+                t.faces.append(face)
+            t.faces.sort(key=rank, reverse=True)
+            del t.faces[KEEP_FACES:]
+
+    # -- naming people from the video -----------------------------------------
+    def unnamed(self) -> list[dict]:
+        """People in view with a clear face and no name, best face first."""
+        with self._lock:
+            return [{"track": pid, "score": round(t.faces[0].score, 2), "width": t.faces[0].width,
+                     "faces": len(t.faces)}
+                    for pid, t in sorted(self._tracks.items())
+                    if t.person is None and t.faces]
+
+    def face_shot(self, person_id: int) -> bytes | None:
+        with self._lock:
+            t = self._tracks.get(person_id)
+            return t.faces[0].shot if t and t.faces else None
+
+    def faces_of(self, person_id: int) -> tuple[list[Face], datetime | None]:
+        """The faces held for this person and when they were first seen."""
+        with self._lock:
+            t = self._tracks.get(person_id)
+            return (list(t.faces), t.since) if t else ([], None)
+
+    def assign(self, person_id: int, who: int) -> None:
+        """Name a tracked person at once (they were just enrolled from the video)."""
+        with self._lock:
+            t = self._tracks.get(person_id)
+            if t is not None:
+                t.person, t.challenger, t.challenges = who, None, 0
+                t.votes.clear()
+                t.faces.clear()
+
     def name(self, person_id: int) -> str | None:
         with self._lock:
             t = self._tracks.get(person_id)
@@ -234,6 +316,64 @@ class FaceIdentifier:
     def reset(self) -> None:
         with self._lock:
             self._tracks.clear()
+
+
+# COCO keypoints of the head: nose, eyes, ears.
+_HEAD = (0, 1, 2, 3, 4)
+
+
+def _head_point(keypoints, min_conf: float = 0.5):
+    """Mean position of the visible head keypoints (x, y), or None."""
+    if keypoints is None:
+        return None
+    k = np.asarray(keypoints, np.float32)
+    if k.ndim != 2 or k.shape[0] < 5 or k.shape[1] < 3:
+        return None
+    vis = k[list(_HEAD)]
+    vis = vis[vis[:, 2] >= min_conf]
+    if len(vis) == 0:
+        return None
+    return float(vis[:, 0].mean()), float(vis[:, 1].mean())
+
+
+def pick_face(faces: np.ndarray, head, box):
+    """This person's face among those found in their head crop, or None.
+
+    With head keypoints: the face whose box (with a margin) contains them,
+    nearest first. Without: only a face centred inside the person's own box,
+    in its upper half, and only if there is exactly one: with several it
+    would be a guess. Taking the largest face instead named a person after
+    the larger face of someone in front of them (classroom clip, 2026-11-20).
+    """
+    if len(faces) == 0:
+        return None
+    if head is not None:
+        hx, hy = head
+        fits = []
+        for f in faces:
+            x, y, w, h = (float(v) for v in f[:4])
+            m = 0.25
+            if x - m * w <= hx <= x + w * (1 + m) and y - m * h <= hy <= y + h * (1 + m):
+                fits.append(((x + w / 2 - hx) ** 2 + (y + h / 2 - hy) ** 2, f))
+        return min(fits, key=lambda t: t[0])[1] if fits else None
+    x1, y1, x2, y2 = box
+    inside = [f for f in faces
+              if x1 <= f[0] + f[2] / 2 <= x2 and f[1] + f[3] / 2 <= y1 + 0.5 * (y2 - y1)]
+    return inside[0] if len(inside) == 1 else None
+
+
+def _shot(img: np.ndarray, f: np.ndarray, size: int = 160) -> bytes:
+    """The face with a margin around it, as a small JPEG for the dashboard."""
+    x, y, w, h = (float(v) for v in f[:4])
+    m = 0.35
+    H, W = img.shape[:2]
+    x1, y1 = max(0, int(x - m * w)), max(0, int(y - m * h))
+    x2, y2 = min(W, int(x + w * (1 + m))), min(H, int(y + h * (1 + m)))
+    face = img[y1:y2, x1:x2]
+    scale = size / max(face.shape[:2])
+    face = cv2.resize(face, None, fx=scale, fy=scale,
+                      interpolation=cv2.INTER_AREA if scale < 1 else cv2.INTER_CUBIC)
+    return cv2.imencode(".jpg", face, [cv2.IMWRITE_JPEG_QUALITY, 88])[1].tobytes()
 
 
 def faces_dir() -> Path:
