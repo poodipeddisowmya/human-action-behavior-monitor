@@ -77,7 +77,12 @@ Each tracked person gets a coloured box, a stable ID, the recognised action and
 a confidence figure. Completed actions accumulate in the events table with
 their start time and duration.
 
-The **CPU vs GPU** tab (`http://localhost:8000/#compare`) plays a recorded
+The dashboard opens on an **Overview** of the four things it does (the
+hardware comparison, the new activities, face recognition, the activity log
+with proof photos), each with a button that shows it working; the live view
+is at `#live`.
+
+The **CPU · T4 · Jetson** tab (`http://localhost:8000/#compare`) plays a recorded
 comparison: the same clips through the same software on a laptop CPU, a Tesla
 T4 GPU and an NVIDIA Jetson, side by side and frame-synced, with the measured
 figures. Install a recording with `python scripts/install_showcase.py

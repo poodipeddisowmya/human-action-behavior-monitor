@@ -6,11 +6,12 @@ import { PersonSummary } from "../services/api";
 
 interface Props {
   persons: PersonSummary[];
+  names: Record<string, string>;   // track ID -> enrolled name, when recognised
   selected: string | null;
   onSelect: (id: string) => void;
 }
 
-export default function PersonList({ persons, selected, onSelect }: Props) {
+export default function PersonList({ persons, names, selected, onSelect }: Props) {
   const [q, setQ] = useState("");
   // Track IDs restart with every video or camera session, so the full table
   // fills up with past sessions' people: show the last 10 minutes by default.
@@ -20,8 +21,9 @@ export default function PersonList({ persons, selected, onSelect }: Props) {
     [persons],
   );
   const filtered = useMemo(
-    () => (all ? persons : recent).filter(p => p.id.toLowerCase().includes(q.toLowerCase())),
-    [persons, recent, all, q],
+    () => (all ? persons : recent).filter(p =>
+      `${p.id} ${names[p.id] ?? ""}`.toLowerCase().includes(q.toLowerCase())),
+    [persons, recent, all, q, names],
   );
 
   return (
@@ -38,7 +40,7 @@ export default function PersonList({ persons, selected, onSelect }: Props) {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search by ID…"
+            placeholder="Search by name or ID…"
             className="w-full bg-surface border border-border rounded-lg pl-9 pr-3 py-2 text-sm outline-none focus:border-accent"
           />
         </div>
@@ -54,7 +56,10 @@ export default function PersonList({ persons, selected, onSelect }: Props) {
             )}
           >
             <div className="flex justify-between items-baseline">
-              <span className="font-mono font-medium">{p.id}</span>
+              <span>
+                <span className={names[p.id] ? "font-medium" : "text-muted"}>{names[p.id] ?? "Unknown"}</span>
+                <span className="ml-2 font-mono text-xs text-muted">{p.id}</span>
+              </span>
               <span className="text-xs text-muted">
                 {formatDistanceToNow(new Date(p.last_seen))} ago
               </span>
