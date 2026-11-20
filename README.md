@@ -9,7 +9,9 @@ webcam — the server's own, or the viewer's own browser webcam.
 **GPU:**
 [Client demo on Kaggle's free GPU](docs/KAGGLE_DEMO.md) ·
 [Production deployment (Docker)](docs/DEPLOYMENT.md) ·
-[Windows GPU machine](docs/GPU_DEMO.md)
+[Windows GPU machine](docs/GPU_DEMO.md) ·
+[NVIDIA Jetson](docs/JETSON.md) ·
+[Client demo on the Jetson](docs/CLIENT_DEMO.md)
 
 ---
 
@@ -75,10 +77,17 @@ Each tracked person gets a coloured box, a stable ID, the recognised action and
 a confidence figure. Completed actions accumulate in the events table with
 their start time and duration.
 
-The **CPU vs GPU** tab (`http://localhost:8000/#compare`) plays a recorded
-comparison: the same clips through the same software on a laptop CPU and on a
-GPU, side by side and frame-synced, with the measured figures. Install a
-recording with `python scripts/install_showcase.py dist/client-demo`.
+The dashboard opens on an **Overview** of the four things it does (the
+hardware comparison, the new activities, face recognition, the activity log
+with proof photos), each with a button that shows it working; the live view
+is at `#live`.
+
+The **CPU · T4 · Jetson** tab (`http://localhost:8000/#compare`) plays a recorded
+comparison: the same clips through the same software on a laptop CPU, a Tesla
+T4 GPU and an NVIDIA Jetson, side by side and frame-synced, with the measured
+figures. Install a recording with `python scripts/install_showcase.py
+dist/client-demo`; add another device with `scripts/add_showcase_side.py`
+(see [docs/JETSON.md](docs/JETSON.md)).
 
 On a GPU the subtitle is a detailed description written by a small
 vision-language model (SmolVLM2) from the frames themselves, grounded in what
@@ -99,6 +108,22 @@ Each is a group of Kinetics classes ([target_vocabulary.py](src/action_recogniti
 "dancing" covers fifteen dance styles, "swimming" the three strokes. Adding an
 activity Kinetics already knows is one line there; one it does not know needs
 training on labelled footage.
+
+On a GPU, three more, which the Kinetics model does not know
+([docs/NEW_ACTIVITIES.md](docs/NEW_ACTIVITIES.md)):
+
+`making tea` · `taking tablets` — recognised from a text description by a
+zero-shot video transformer (X-CLIP); adding another is one line of config.
+`falling down` — from the skeleton over time (upright, then lying within a
+second), shown as an alert in the subtitles and the events log.
+
+Every logged activity keeps 2–3 proof images of the person (start, middle,
+end), shown in the events table.
+
+**Face recognition** names enrolled people ("Ramesh is taking tablets"):
+enrol them with a few photos in the Known people panel, or straight from a
+proof image; everyone else stays Unknown. With consent only — see
+[docs/FACE_RECOGNITION.md](docs/FACE_RECOGNITION.md).
 
 Plus body posture and motion from skeleton geometry, which works even when no
 target activity is in view:

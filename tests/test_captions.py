@@ -183,3 +183,30 @@ def test_steady_object_and_posture_are_narrated():
         c.update([a], "in an office", now=t)
         t += 0.1
     assert c.text == "A seated person is drinking from a bottle in an office."
+
+
+def test_specific_activity_replaces_posture_quickly():
+    from src.description.captions import CaptionComposer
+    c = CaptionComposer()
+    ann = lambda lbl: [{"label": lbl, "confidence": 0.7}]
+    t = 0.0
+    while t < 4.0:
+        c.update(ann("sitting"), None, now=t); t += 0.05
+    assert "sitting" in c.text
+    start = t
+    while "taking tablets" not in c.text and t < start + 5:
+        c.update(ann("taking tablets"), None, now=t); t += 0.05
+    assert t - start < 1.2          # majority within 1 s window + 0.4 s hold
+
+
+def test_fall_alert_goes_up_at_once():
+    from src.description.captions import CaptionComposer
+    c = CaptionComposer()
+    ann = lambda lbl: [{"label": lbl, "confidence": 0.9}]
+    t = 0.0
+    while t < 4.0:
+        c.update(ann("walking"), None, now=t); t += 0.05
+    start = t
+    while not c.text.startswith("Alert") and t < start + 5:
+        c.update(ann("falling down"), None, now=t); t += 0.05
+    assert t - start < 0.8

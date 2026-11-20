@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { format } from "date-fns";
-import { ActionHistoryEntry } from "../services/api";
+import { ActionHistoryEntry, EventMessage } from "../services/api";
 import clsx from "clsx";
+import EvidenceViewer, { EvidenceThumbs } from "./EvidenceViewer";
 
 const LABEL_COLOR: Record<string, string> = {
   standing: "bg-slate-500",
@@ -10,10 +12,14 @@ const LABEL_COLOR: Record<string, string> = {
   bending:  "bg-purple-500",
   lying:    "bg-cyan-500",
   falling:  "bg-danger",
+  "falling down": "bg-danger",
   picking_up: "bg-pink-500",
 };
 
-export default function ActivityTimeline({ history }: { history: ActionHistoryEntry[] }) {
+export default function ActivityTimeline({ history, personId }: {
+  history: ActionHistoryEntry[]; personId: string;
+}) {
+  const [open, setOpen] = useState<{ event: EventMessage; index: number } | null>(null);
   if (history.length === 0) {
     return <div className="p-4 text-sm text-muted">No activity recorded yet.</div>;
   }
@@ -34,10 +40,17 @@ export default function ActivityTimeline({ history }: { history: ActionHistoryEn
               <div className="text-xs text-muted mt-0.5">
                 {h.duration_s.toFixed(1)}s · {Math.round(h.confidence * 100)}% confidence
               </div>
+              {(h.evidence?.length ?? 0) > 0 && (
+                <div className="mt-1.5">
+                  <EvidenceThumbs event={{ ...h, person_id: personId }}
+                    onOpen={(index) => setOpen({ event: { ...h, person_id: personId }, index })} />
+                </div>
+              )}
             </div>
           </li>
         ))}
       </ul>
+      {open && <EvidenceViewer event={open.event} start={open.index} onClose={() => setOpen(null)} />}
     </div>
   );
 }

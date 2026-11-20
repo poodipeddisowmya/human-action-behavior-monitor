@@ -86,6 +86,13 @@ gpu:
   #   clearly correct 13/15 vs 9/15; correct on screen 65% vs 47%;
   #   correct label after 2.1 s vs 5.3 s (median); smoking 92% vs 10%.
   deep_backend: videomae
+  # No minimum confidence per look. Tried 2026-11-17 (Jetson, 29 showcase
+  # clips) to stop weak, steady guesses pooling into a wrong label on a
+  # webcam close-up ("eating" from 0.34 looks): a 0.4 floor cost 69% -> 61%
+  # correct on screen and wrong labels stayed at 2%. Drinking and eating are
+  # recognised from consistent looks of 0.13-0.37 (hd-drinking-2 86% -> 0%,
+  # hd-eating-2 94% -> 0%), so strength alone cannot tell them from a
+  # close-up. Camera framing is the fix: see docs/JETSON.md, Live camera.
   # Detailed, scene-aware subtitles written by a small vision-language model
   # (SmolVLM2-500M) from the video frames, grounded in what the system
   # detected. About a second per sentence on a T4; ~100 s on a laptop CPU,
@@ -98,3 +105,78 @@ gpu:
   # Bundled in models/; if it is ever missing and cannot be downloaded, the
   # nano model above is used automatically.
   detector_weights: yolov8s-pose.pt
+
+# NVIDIA Jetson (Orin): the gpu: profile above, plus this. Same models;
+# only how they run changes. JETSON_OPTIMISED=0 turns it off, reproducing the
+# T4's exact configuration. Measured on an Orin Nano Super (MAXN_SUPER),
+# 2026-11-16 — see docs/JETSON.md:
+#   VideoMAE look       FP32 202 ms -> FP16 75 ms
+#   pose detector       PyTorch FP16 33 ms (640 px) / 45 ms (960 px) -> TensorRT, see below
+#   CLIP                FP16 halves its 600 MB of weights; same speed
+#   deep_min_interval_s left at the gpu: 0.4 s. 0.2 s was measured over the
+#   29 showcase clips: 21/29 vs 22/29 clear, 70% vs 69% on screen, labels
+#   0.04 s later; the 8-frame stride per person, not the gap, sets the rate.
+jetson:
+  detector_engine: true   # TensorRT engine, if scripts/build_trt_engines.py built one
+  deep_half: true
+  clip_half: true
+  # SmolVLM2 subtitles do not fit in 8 GB beside a desktop session: with
+  # them on, its sentences and even person detections failed for lack of
+  # memory. Template subtitles instead; labels are unaffected. On a headless
+  # board (or a 16 GB Orin) set VLM_CAPTIONS=1.
+  vlm_captions: false
+
+# Activities the Kinetics-trained models do not know, defined in words and
+# recognised by a zero-shot video transformer: X-CLIP scores a 32-frame look
+# against these descriptions and against the activities above (which keep
+# it from claiming a look that is really eating or drinking). GPU only.
+# To add an activity: add a name and 1-3 descriptions here; nothing else.
+#
+# Measured 2026-11-18 on the Jetson (scripts/eval_open_vocab.py; test clips
+# from Mixkit / Wikimedia Commons, plus the 29 showcase clips and UR Fall
+# everyday-activity clips as look-alikes):
+#                       on clips showing it   best other clip   false alarms
+#   taking tablets      0.43-0.65             0.10 (drinking)   0 of 47 clips
+#   making tea          0.63-0.87             0.21 (cooking)    0 of 47 clips
+# 313 ms and 582 MB per look on an Orin Nano (FP16); xclip-base-patch32
+# (78 ms) separated tablets far worse (0.18-0.33 against 0.20 for drinking).
+# Falls are not here: a fall lasts about a second, too short for a look;
+# the skeleton catches them (src/action_recognition/fall_detector.py).
+open_vocab:
+  enabled: true
+  model: microsoft/xclip-base-patch16-zero-shot
+  interval_s: 1.0          # one look a second, in its own thread
+  threshold: 0.35          # score a look must reach
+  thresholds:              # per activity, where the measured margin allows
+    taking tablets: 0.25   # highest score on any non-tablet clip: 0.14;
+                           # live, X-CLIP ranked tablets first at 0.21-0.31
+                           # on a woman taking pills (making tea keeps 0.35:
+                           # a cooking clip reached 0.23)
+  min_hits: 2              # of the last 3 looks, before the label shows...
+  strong: 0.5              # ...or one look this strong. Across ~300 looks of
+                           # clips showing neither, no look scored above 0.14
+                           # (tablets) or 0.23 (tea); real tea looks are mostly
+                           # 0.5-0.9. Without it, tea first showed 5-9 s into a
+                           # clip (2.5 s of video, then 2 of 3 looks at 1/s).
+  hold_s: 4.0              # keeps showing this long after the last supporting look
+  activities:
+    making tea:
+      - making tea
+      - a person making a cup of tea, pouring hot water or boiling tea
+    taking tablets:
+      - taking a pill
+      - a person taking a tablet and swallowing medicine with water
+
+# Face recognition: names tracked people who were enrolled (with consent) in
+# the dashboard's Known people panel; everyone else stays "Unknown". OpenCV
+# Zoo's YuNet (MIT) + SFace (Apache-2.0), on the CPU, in its own thread.
+# Measured on the Jetson (4 people, 14 s each): same person 0.45-0.96 cosine
+# on clear faces, different people at most 0.27. See src/identity/face_id.py.
+face_id:
+  enabled: true
+  threshold: 0.363         # SFace's published cosine bar for "same person"
+  margin: 0.05             # and ahead of the next enrolled person by this
+  min_quality: 0.85        # face detection score; below it a look is skipped
+  min_face_px: 40          # face width; smaller faces are skipped
+  look_interval_s: 0.5     # per person, until named (2 of 3 looks must agree)
+  recheck_s: 4.0           # per person, once named

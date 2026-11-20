@@ -199,10 +199,40 @@ def open_camera(index: int):
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, _CAM_SIZE[0])
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, _CAM_SIZE[1])
     cap.set(cv2.CAP_PROP_FPS, _CAM_FPS)
-    # Hold at most one frame in the driver queue, so what is shown is what
-    # the camera sees now, not a backlog from a second ago.
-    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    # Two driver buffers: what is shown is at most one frame (33 ms) old, not
+    # a backlog. Not one: with a single buffer the camera has nowhere to put
+    # the next frame while we hold the current one, so it skips every other
+    # frame. Measured on a Logitech C270 at 30 fps (Jetson Orin, 2026-11-17):
+    # 1 buffer -> exactly 15.0 fps whatever the exposure.
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
+    _hold_frame_rate(index)
     return cap
+
+
+def _hold_frame_rate(index: int) -> None:
+    """Stop a UVC webcam halving its frame rate in dim light (Linux).
+
+    Logitech webcams ship with exposure_auto_priority on: in an ordinary
+    indoor room they lengthen the exposure and deliver 15 fps instead of 30.
+    Turning it off keeps 30 fps (the image is a little darker); measured on
+    the Jetson with a C270, 2026-11-19: 15.0 -> 29.8 fps. OpenCV has no
+    property for it, so set the V4L2 control directly. Best effort: a camera
+    without the control is left as it is.
+    """
+    if not sys.platform.startswith("linux"):
+        return
+    try:
+        import fcntl
+        import os
+        import struct
+        fd = os.open(f"/dev/video{index}", os.O_RDWR)
+        try:
+            VIDIOC_S_CTRL, V4L2_CID_EXPOSURE_AUTO_PRIORITY = 0xC008561C, 0x009A0903
+            fcntl.ioctl(fd, VIDIOC_S_CTRL, bytearray(struct.pack("Ii", V4L2_CID_EXPOSURE_AUTO_PRIORITY, 0)))
+        finally:
+            os.close(fd)
+    except OSError:
+        pass
 
 
 class SwappableFileSource(VideoSource):

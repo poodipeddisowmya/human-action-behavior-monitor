@@ -168,6 +168,11 @@ def setup() -> None:
                    "c='HuggingFaceTB/SmolVLM2-500M-Video-Instruct';"
                    "M.from_pretrained(c);P.from_pretrained(c);print('  SmolVLM2 ready')"],
         env={**os.environ, "HF_HUB_OFFLINE": "0"})
+    # X-CLIP, the open-vocabulary activities (making tea, taking tablets...).
+    run([PY, "-c", "from transformers import XCLIPModel as M,XCLIPProcessor as P;"
+                   "c='microsoft/xclip-base-patch16-zero-shot';"
+                   "M.from_pretrained(c);P.from_pretrained(c);print('  X-CLIP ready')"],
+        env={**os.environ, "HF_HUB_OFFLINE": "0"})
     # The GPU detector, if config asks for one larger than the bundled one.
     run([PY, "-c", "import sys;sys.path.insert(0,'.');from config import settings;"
                    "from src.tracking.person_tracker import fetch_weights;"

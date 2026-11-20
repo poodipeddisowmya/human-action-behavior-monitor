@@ -5,11 +5,14 @@ export interface PersonSummary {
 }
 
 export interface ActionHistoryEntry {
+  id?: number;
   label: string;
   start_time: string;
   end_time: string;
   duration_s: number;
   confidence: number;
+  evidence?: string[];       // proof image URLs (start, middle, end)
+  identity?: string | null;  // enrolled person named by face recognition
 }
 
 export interface PersonDetail extends PersonSummary {
@@ -17,12 +20,39 @@ export interface PersonDetail extends PersonSummary {
 }
 
 export interface EventMessage {
+  id?: number;
   person_id: string;
   label: string;
   start_time: string;
   end_time: string;
   duration_s: number;
   confidence: number;
+  evidence?: string[];       // proof image URLs (start, middle, end)
+  identity?: string | null;  // enrolled person named by face recognition
+}
+
+// A person in view with a clear face and no name (/api/known-people/on-screen).
+export interface FaceOnScreen {
+  track: number;
+  person_id: string;   // "P006"
+  score: number;
+  width: number;
+  faces: number;       // clear faces held (up to 3)
+}
+
+// Face recognition gallery (/api/known-people).
+export interface KnownPerson {
+  id: number;
+  name: string;
+  created_at: string;
+  samples: { id: number; quality: number }[];
+}
+
+async function send<T>(url: string, init: RequestInit): Promise<T> {
+  const r = await fetch(url, init);
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body?.detail || `${r.status} ${r.statusText}`);
+  return body as T;
 }
 
 async function json<T>(url: string): Promise<T> {
@@ -75,8 +105,10 @@ export interface ShowcaseClip {
   name: string;
   expected: string | null;
   featured: boolean;
-  left: ShowcaseSide;
-  right: ShowcaseSide;
+  left: ShowcaseSide | null;
+  right: ShowcaseSide | null;
+  extra?: Record<string, ShowcaseSide | null>;   // further devices, by key
+  new_activity?: boolean;    // recorded on the GPUs only (added after the CPU run)
 }
 export interface ShowcaseTotals {
   clear: number;
@@ -93,6 +125,14 @@ export interface Showcase {
   seconds_per_clip: number;
   labelled_clips: number;
   totals: { left: ShowcaseTotals; right: ShowcaseTotals };
+  // Further devices recorded on the same clips (scripts/add_showcase_side.py).
+  extra?: { key: string; tag: string; sub: string; short: string; recorded: string | null; totals: ShowcaseTotals }[];
+  // Activities added after the CPU recording, totalled per GPU side.
+  new_activities?: {
+    clips: number;
+    labels: string[];
+    totals: Record<string, ShowcaseTotals & { recorded: number }>;   // by column key
+  } | null;
   clips: ShowcaseClip[];
 }
 
@@ -108,7 +148,29 @@ export const api = {
 
   metrics: () => json<Metrics>("/api/metrics"),
   showcase: () => json<Showcase>("/api/showcase"),
-  showcaseVideo: (side: "left" | "right", file: string) =>
+  knownPeople: () => json<KnownPerson[]>("/api/known-people"),
+  addKnownPerson: (name: string) => send<KnownPerson>("/api/known-people", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) }),
+  addFacePhotos: (id: number, files: File[]) => {
+    const fd = new FormData();
+    files.forEach((f) => fd.append("files", f));
+    return send<{ added: { id: number }[]; refused: { file: string; reason: string }[] }>(
+      `/api/known-people/${id}/photos`, { method: "POST", body: fd });
+  },
+  enrolFromEvidence: (id: number, eventId: number, index: number) => send<{ id: number }>(
+    `/api/known-people/${id}/from-evidence`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: eventId, index }) }),
+  deleteKnownPerson: (id: number) => send(`/api/known-people/${id}`, { method: "DELETE" }),
+  deleteFacePhoto: (id: number, sampleId: number) =>
+    send(`/api/known-people/${id}/photos/${sampleId}`, { method: "DELETE" }),
+  facesOnScreen: () => json<FaceOnScreen[]>("/api/known-people/on-screen"),
+  faceOnScreenUrl: (track: number, v: number) => `/api/known-people/on-screen/${track}/face?v=${v}`,
+  enrolFromVideo: (id: number, track: number) => send<{ added: { id: number }[]; events_named: number }>(
+    `/api/known-people/${id}/from-video`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ track }) }),
+  facePhotoUrl: (id: number, sampleId: number) => `/api/known-people/${id}/photos/${sampleId}`,
+  showcaseVideo: (side: string, file: string) =>
     `/api/showcase/video/${side}/${encodeURIComponent(file)}`,
   listSources: () => json<SourcesResponse>("/api/sources"),
   switchSource: async (filename: string) => {

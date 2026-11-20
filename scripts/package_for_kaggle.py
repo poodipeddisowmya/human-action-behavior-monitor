@@ -24,6 +24,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 INCLUDE = ["config", "src", "scripts", "models", "kaggle", "docs", "tests",
            "ui/dist", "data/samples", "data/showcase", "data/candidates/720p",
+           "data/new-activities",
            "requirements.txt", "requirements-gpu.txt", "requirements-optional.txt",
            "README.md", ".env.example", "Dockerfile", "docker-compose.yml", ".dockerignore"]
 SKIP_DIRS = {"__pycache__", ".pytest_cache", "node_modules", ".venv", "checkpoints_tmp"}
@@ -36,6 +37,10 @@ def wanted(p: Path, phone: bool) -> bool:
     if p.name.startswith(".") and p.name not in {".env.example", ".dockerignore", ".gitkeep"}:
         return False
     if not phone and p.name.startswith("WhatsApp_"):
+        return False
+    # New-activity clips go to the PRIVATE Kaggle dataset for the T4 recording;
+    # the non-commercial UR Fall clips and local results stay here.
+    if "new-activities" in p.parts and ({"urfall", "results"} & set(p.parts) or p.suffix == ".py"):
         return False
     # HD benchmark footage: skip the odd very large file to keep the upload lean.
     if "candidates" in p.parts and (ROOT / p).stat().st_size > 20 * 2**20:

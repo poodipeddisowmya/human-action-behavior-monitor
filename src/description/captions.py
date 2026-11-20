@@ -51,6 +51,9 @@ _PHRASES: dict[str, str] = {
     "walking": "walking",
     "running": "running",
     "falling": "falling",
+    "falling down": "falling down",
+    "making tea": "making tea",
+    "taking tablets": "taking tablets",
     "bending": "bending down",
     "lying": "lying down",
     "kneeling": "kneeling",
@@ -168,6 +171,7 @@ _WITH_OBJECT: dict[tuple[str, str], str] = {
     ("brushing teeth", "toothbrush"): "brushing their teeth",
 }
 _POSTURE_ADJ = {"sitting": "seated", "standing": "standing"}
+_FALL = {"falling", "falling down"}
 
 
 def _count(n: int) -> str:
@@ -189,7 +193,8 @@ def _duration(seconds: float | None) -> str:
 def compose_sentence(labels: list[str | None], scene: str | None,
                      details: dict | None = None, posture: str | None = None,
                      group_posture: str | None = None,
-                     duration_s: float | None = None) -> str:
+                     duration_s: float | None = None,
+                     name: str | None = None) -> str:
     """One sentence from the stable label of each person present.
 
     `labels` has one entry per person; None means "present, activity not yet
@@ -208,12 +213,22 @@ def compose_sentence(labels: list[str | None], scene: str | None,
         return ""
 
     known = [l for l in labels if l]
+    # A fall is an alert, said first and plainly, whatever else is going on.
+    fallen = sum(1 for l in known if l in _FALL)
+    if fallen:
+        who = ("a person has" if not (name and n == 1) else f"{name} has") if fallen == 1 \
+            else f"{_count(fallen)} people have"
+        rest = n - fallen
+        tail = f" {_count(rest).capitalize()} other{'s' if rest != 1 else ''} in view." if rest else ""
+        return f"Alert: {who} fallen down{where}.{tail}"
     if n == 1:
         if not known:
             return f"One person{where}; identifying the activity…"
         label = known[0]
         subject = "A person"
-        if posture in _POSTURE_ADJ and label not in _POSTURE:
+        if name:                    # an enrolled person, named by face recognition
+            subject = name
+        elif posture in _POSTURE_ADJ and label not in _POSTURE:
             subject = f"A {_POSTURE_ADJ[posture]} person"
         return f"{subject} is {_phrase(label, details)}{where}{_duration(duration_s)}."
 
@@ -255,6 +270,7 @@ class CaptionComposer:
         self._kept_details: dict[str, str] = {}
         self._kept_posture: str | None = None
         self._posture_frames: deque[tuple[float, Counter]] = deque()
+        self._names: deque[tuple[float, tuple]] = deque()
         self._shown = _STARTING
         self._shown_key: tuple = ()
         self._pending: str | None = None
@@ -268,6 +284,7 @@ class CaptionComposer:
         self._kept_details = {}
         self._kept_posture = None
         self._posture_frames.clear()
+        self._names.clear()
         self._shown = _STARTING
         self._shown_key = ()
         self._pending = None
@@ -375,9 +392,20 @@ class CaptionComposer:
             else:
                 self._main = (label, now, now)
             duration = now - self._main[1]
+        self._names.append((now, tuple(a.get("name") for a in annotations)))
+        while self._names and now - self._names[0][0] > _LABEL_WINDOW_S:
+            self._names.popleft()
+        name = None
+        if people == 1:
+            seen = Counter(ns[0] for _, ns in self._names if len(ns) == 1)
+            if seen:
+                top, k = seen.most_common(1)[0]
+                if top and k >= 0.5 * len(self._names):
+                    name = top
         sentence = compose_sentence(groups + [None] * (people - len(groups)), scene,
                                     details=details, posture=posture,
-                                    group_posture=group_posture, duration_s=duration)
+                                    group_posture=group_posture, duration_s=duration,
+                                    name=name)
         key = (people, tuple(sorted(groups)), scene)
 
         if sentence == self._shown:
@@ -385,7 +413,9 @@ class CaptionComposer:
         elif sentence != self._pending:
             self._pending, self._pending_since = sentence, now
             self._pending_key = key
-        if _only_adds(self._shown_key, key):
+        if any(g in _FALL for g in groups):
+            hold = 0.0                  # an alert goes up at once
+        elif _only_adds(self._shown_key, key) or _sharpens(self._shown_key, key):
             hold = _FAST_HOLD_S
         elif _only_count_differs(self._shown_key, key):
             hold = _COUNT_HOLD_S
@@ -394,6 +424,29 @@ class CaptionComposer:
         if self._pending is not None and now - self._pending_since >= hold:
             self._shown, self._shown_key, self._pending = self._pending, self._pending_key, None
         return self._shown
+
+
+def _sharpens(old: tuple, new: tuple) -> bool:
+    """True when `new` only replaces plain postures with specific activities
+    ("sitting" -> "taking tablets"): more information, not a contradiction,
+    so it goes up as fast as an addition. Measured on the Jetson, the full
+    hold kept "A person is sitting" under a box already reading "taking
+    tablets 73%" for over a second."""
+    if not old:
+        return False
+    (n0, g0, s0), (n1, g1, s1) = old, new
+    if n0 != n1 or (s0 and s0 != s1):
+        return False
+    gone = list(g0)
+    for g in g1:
+        if g in gone:
+            gone.remove(g)
+    added = list(g1)
+    for g in g0:
+        if g in added:
+            added.remove(g)
+    return bool(added) and all(g in _POSTURE for g in gone) \
+        and all(g not in _POSTURE for g in added)
 
 
 def _only_count_differs(old: tuple, new: tuple) -> bool:

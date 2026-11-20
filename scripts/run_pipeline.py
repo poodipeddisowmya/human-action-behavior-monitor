@@ -20,13 +20,15 @@ import uvicorn
 
 from config import settings
 from src.api.main import app, set_pipeline_source
-from src.input import CameraSource, SwappableFileSource
+from src.input import SwappableFileSource
 
 
 def build_source_factory(target: str):
+    # Cameras and files both go through SwappableFileSource, so the UI can
+    # switch between the camera and the clips mid-run, shows what is playing,
+    # and the camera opens with the tuned capture settings (open_camera).
     if target.isdigit():
-        return lambda: CameraSource(int(target))
-    # Files are wrapped in SwappableFileSource so the UI can switch mid-run.
+        return lambda: SwappableFileSource(f"camera:{target}")
     return lambda: SwappableFileSource(target)
 
 
