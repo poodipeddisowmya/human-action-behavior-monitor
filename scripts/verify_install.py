@@ -49,6 +49,28 @@ def main() -> None:
         "and run setup.bat again",
     )
 
+    # --- Large files (Git LFS) ---------------------------------------------
+    # Model weights, demo clips and the comparison videos are stored with Git
+    # LFS. A clone made without Git LFS installed, or GitHub's "Download ZIP",
+    # leaves small text pointers in their place, and everything fails later
+    # with unreadable errors (a "corrupt" model file, a video that will not
+    # open). Catch it here, with the fix.
+    root = Path(__file__).resolve().parents[1]
+    pointers = []
+    for pattern in ("models/*.pt", "models/face/*.onnx", "data/samples/*.mp4",
+                    "data/samples/*.avi", "data/showcase/*.mp4", "data/showcase/*/*.mp4"):
+        for f in root.glob(pattern):
+            try:
+                with open(f, "rb") as fh:
+                    if fh.read(40).startswith(b"version https://git-lfs"):
+                        pointers.append(f.relative_to(root).as_posix())
+            except OSError:
+                pass
+    check("large files downloaded (Git LFS)", not pointers,
+          f"{len(pointers)} file(s) are LFS pointers, e.g. {pointers[0]}" if pointers else "",
+          "install Git LFS (https://git-lfs.com), then in this folder run: "
+          "git lfs install  and  git lfs pull")
+
     # --- Third-party packages --------------------------------------------
     # Imported by module name, since the pip name and import name differ for
     # several of these (opencv-python -> cv2, pyyaml -> yaml).

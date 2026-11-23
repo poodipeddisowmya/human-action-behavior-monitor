@@ -5,6 +5,8 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 
 from src.storage import ActionRecord, Person, get_session
+from src.storage.evidence import evidence_urls
+from src.utils.timefmt import utc_iso
 
 router = APIRouter()
 
@@ -16,8 +18,8 @@ async def list_persons() -> list[dict]:
         return [
             {
                 "id": p.external_id,
-                "first_seen": p.first_seen.isoformat(),
-                "last_seen": p.last_seen.isoformat(),
+                "first_seen": utc_iso(p.first_seen),
+                "last_seen": utc_iso(p.last_seen),
             }
             for p in rows
         ]
@@ -43,15 +45,18 @@ async def get_person(external_id: str) -> dict:
 
         return {
             "id": person.external_id,
-            "first_seen": person.first_seen.isoformat(),
-            "last_seen": person.last_seen.isoformat(),
+            "first_seen": utc_iso(person.first_seen),
+            "last_seen": utc_iso(person.last_seen),
             "history": [
                 {
+                    "id": a.id,
                     "label": a.label,
-                    "start_time": a.start_time.isoformat(),
-                    "end_time": a.end_time.isoformat(),
+                    "start_time": utc_iso(a.start_time),
+                    "end_time": utc_iso(a.end_time),
                     "duration_s": a.duration_s,
                     "confidence": a.confidence,
+                    "evidence": evidence_urls(a),
+                    "identity": a.identity,
                 }
                 for a in actions
             ],

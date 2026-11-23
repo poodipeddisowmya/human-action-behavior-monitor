@@ -50,7 +50,7 @@ export default function PersonDetail({ personId }: { personId: string }) {
         </div>
       )}
 
-      <ActivityTimeline history={detail.history} />
+      <ActivityTimeline history={detail.history} personId={detail.id} />
     </div>
   );
 }

@@ -34,7 +34,8 @@ Double-click **`kaggle_gpu.bat`**. It:
 
 ## The demo — one cell
 
-Open https://www.kaggle.com/code/sowmyasrmaha/ham-gpu-demo → **Edit** →
+Open the **HAM GPU Demo** notebook in your Kaggle account
+(`https://www.kaggle.com/code/<your-username>/ham-gpu-demo`) → **Edit** →
 **Run All**. In ~4 minutes (≈1 minute on later runs in the same session) it
 shows a green box with the **client link**. Send that whole link — the access
 token is part of it; without it the page asks for one. Leave the cell running

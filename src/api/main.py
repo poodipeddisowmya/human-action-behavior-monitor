@@ -16,6 +16,8 @@ from src.utils import get_logger
 
 from . import auth
 from .routes import events as events_route
+from .routes import evidence as evidence_route
+from .routes import known_people as known_people_route
 from .routes import persons as persons_route
 from .routes import sources as sources_route
 from .routes import stream as stream_route
@@ -44,6 +46,7 @@ async def lifespan(app: FastAPI):
     await init_db()
     log.info("database ready")
     bcast_task = asyncio.create_task(broadcaster.run())
+    purge_task = asyncio.create_task(_purge_evidence_daily())
 
     pipeline = None
     if _pending_source_factory is not None:
@@ -58,6 +61,10 @@ async def lifespan(app: FastAPI):
             on_event=runtime.on_event,
         )
         runtime.pipeline = pipeline
+        try:
+            await known_people_route.refresh()      # enrolled faces, if any
+        except Exception as e:
+            log.warning(f"face gallery not loaded: {e}")
         pipeline.start()
         log.info(f"pipeline started on {settings.device} ({_gpu_name() or 'no GPU'})")
         if settings.access_token:
@@ -69,6 +76,18 @@ async def lifespan(app: FastAPI):
         if pipeline is not None:
             pipeline.stop()
         bcast_task.cancel()
+        purge_task.cancel()
+
+
+async def _purge_evidence_daily() -> None:
+    """Delete proof images past EVIDENCE_RETENTION_DAYS: now, then hourly."""
+    from src.storage.evidence import purge_old
+    while True:
+        try:
+            await asyncio.to_thread(purge_old)
+        except Exception as e:
+            log.warning(f"evidence clean-up failed: {e}")
+        await asyncio.sleep(3600)
 
 
 app = FastAPI(
@@ -110,6 +129,8 @@ app.add_middleware(
 
 app.include_router(persons_route.router, prefix="/api/persons", tags=["persons"])
 app.include_router(events_route.router, prefix="/api/events", tags=["events"])
+app.include_router(evidence_route.router, prefix="/api/evidence", tags=["evidence"])
+app.include_router(known_people_route.router, prefix="/api/known-people", tags=["known people"])
 app.include_router(sources_route.router, prefix="/api/sources", tags=["sources"])
 app.include_router(stream_route.router, prefix="/api/stream", tags=["stream"])
 app.include_router(showcase_route.router, prefix="/api/showcase", tags=["showcase"])

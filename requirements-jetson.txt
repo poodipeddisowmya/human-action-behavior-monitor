@@ -1,0 +1,12 @@
+# NVIDIA Jetson (JetPack 6.x, CUDA 12.6, Python 3.10) — setup_jetson.sh installs this.
+#
+# PyPI's aarch64 torch wheels are CPU-only on a Jetson; these CUDA builds come
+# from NVIDIA's Jetson AI Lab index. Verified on a Jetson Orin Nano Super
+# (JetPack 6.2.1): torch.cuda.is_available() and torchvision's CUDA NMS work.
+--extra-index-url https://pypi.jetson-ai-lab.io/jp6/cu126/+simple/
+torch==2.8.0
+torchvision==0.23.0
+imageio-ffmpeg==0.8.1        # an ffmpeg binary without apt (H.264 report videos)
+onnx==1.17.0                 # TensorRT engine export (scripts/build_trt_engines.py)
+# TensorRT itself comes from JetPack; setup_jetson.sh links it into .venv.
+-r requirements.txt

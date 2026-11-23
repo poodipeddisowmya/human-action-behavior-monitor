@@ -17,6 +17,11 @@ from config import settings
 from src.action_recognition import ActionClassifier
 from src.description import SceneDescriber
 from src.input import VideoSource
+from src.input.video_source import is_live
+from src.action_recognition.fall_detector import FallDetector
+from src.action_recognition.open_vocab import OpenVocabRecognizer
+from src.identity.face_id import FaceIdentifier
+from src.storage.evidence import EvidenceCollector
 from src.temporal import EventGenerator, TemporalSmoother
 from src.temporal.event_generator import ActionEvent
 from src.temporal.stabilizer import LabelStabilizer
@@ -46,13 +51,25 @@ class Pipeline:
 
         self._tracker = PersonTracker()   # detection + pose + tracking in one pass
         self._classifier = ActionClassifier()
+        # Activities defined by text (making tea, taking tablets...), from a
+        # zero-shot video transformer in its own thread; GPU only.
+        self._open_vocab = OpenVocabRecognizer()
+        # Upright -> lying within a second or so, and staying down
+        # (src/action_recognition/fall_detector.py). Outranks every label.
+        self._falls = FallDetector()
+        # Who each person is, if enrolled (src/identity/face_id.py); public so
+        # the API can hand it a new gallery after an enrolment.
+        self.faces = FaceIdentifier()
         # Smoothing: small window kills flicker; low floor because the deep
         # classifier already applies its own confidence bar upstream.
         self._smoother = TemporalSmoother(window=3, min_confidence=0.4)
         # What is SHOWN: posture changes must persist before the display
         # switches; activities show at once (see stabilizer.py).
         self._stabilizer = LabelStabilizer(settings.model.label_min_dwell_s)
-        self._events = EventGenerator(on_event=self._on_event)
+        # Proof shots of each person while they hold a label; the closing
+        # event takes the first, middle and last (src/storage/evidence.py).
+        self._evidence = EvidenceCollector()
+        self._events = EventGenerator(on_event=self._emit_event)
         # Plain-English caption of who is doing what, and where. Additive:
         # it reads the labels decided above and never feeds back into them.
         narrator = None
@@ -117,7 +134,10 @@ class Pipeline:
         steps = {"detector": self._tracker.warmup,
                  "activity": lambda: self._warm_activity(clf),
                  "objects": objects,
-                 "clip": clip}
+                 "clip": clip,
+                 # Last: the largest load, and on a Jetson it needs the page
+                 # cache that the others' weights just filled to be evicted.
+                 "open-vocab": self._open_vocab.start}
         done = []
         for name, step in steps.items():
             try:
@@ -156,6 +176,15 @@ class Pipeline:
         cur = getattr(self._source, "current", None)
         return str(cur) if cur is not None else None
 
+    def _emit_event(self, event) -> None:
+        """Attach the event's proof shots, then hand it on."""
+        try:
+            event.evidence = self._evidence.take(event.person_id, event.label)
+            event.identity = self.faces.name(event.person_id)
+        except Exception as e:                   # proof is optional, the event is not
+            log.warning(f"evidence for {event.label} not taken: {e}")
+        self._on_event(event)
+
     def _handle_source_switch(self) -> None:
         """Clear every piece of per-person state that assumes one video.
 
@@ -165,6 +194,10 @@ class Pipeline:
         """
         log.info(f"source switched -> {self._current_source}; clearing state")
         self._events.flush()                       # close open events honestly
+        self._evidence.reset()
+        self._open_vocab.reset()
+        self._falls.reset()
+        self.faces.reset()
         for pid in list(self._last_ids):
             self._smoother.reset(pid)
             self._stabilizer.reset(pid)
@@ -316,8 +349,11 @@ class Pipeline:
                 # The source may have switched to one with another frame rate.
                 target_dt = 1.0 / max(1, int(self._source.fps))
 
+            # A file is paced to its frame rate here; a live camera paces
+            # itself (read() waits for the next frame), and sleeping on top
+            # would fall behind it and serve older and older frames.
             elapsed = time.time() - t0
-            if elapsed < target_dt:
+            if elapsed < target_dt and not is_live(key or ""):
                 time.sleep(target_dt - elapsed)
 
     def _process_tracks(self, image: np.ndarray, tracks: list[Track],
@@ -366,6 +402,19 @@ class Pipeline:
                                            crop, timestamp,
                                            single_person=len(tracks) == 1,
                                            frame_hw=(h, w))
+            # An open-vocabulary activity, once confirmed, is more specific
+            # than what the Kinetics model sees in the same look (taking
+            # tablets reads as drinking there; making tea as cooking).
+            # Nothing outranks a fall.
+            self._open_vocab.observe(t.person_id, image, t.xyxy, len(tracks) == 1)
+            ov = self._open_vocab.current(t.person_id, len(tracks) == 1)
+            if ov is not None and (pred is None or not pred.label.startswith("falling")):
+                pred = ov
+            self.faces.observe(t.person_id, image, t.xyxy, t.keypoints)
+            fall = self._falls.update(t.person_id, t.xyxy, t.keypoints,
+                                      timestamp if timestamp is not None else time.monotonic())
+            if fall is not None:
+                pred = fall
             # A tracked person is never shown unlabelled. On the very first
             # frame of a track there is no motion estimate yet (a velocity
             # needs two samples), so we say so explicitly instead of
@@ -379,10 +428,15 @@ class Pipeline:
                         timestamp if timestamp is not None else time.monotonic())
                     label, conf = smoothed.label, smoothed.confidence
                     self._events.update(t.person_id, smoothed, datetime.utcnow())
+                    # After update(): a label change has just closed the old
+                    # event, which took its own shots first.
+                    self._evidence.observe(t.person_id, label, conf, image, t.xyxy,
+                                           self.faces.name(t.person_id))
 
             annotations.append({
                 "xyxy": t.xyxy,
                 "person_id": t.person_id,
+                "name": self.faces.name(t.person_id),
                 "label": label,
                 "confidence": conf,
                 # Caption context (see VideoMAEClassifier.update).
@@ -392,6 +446,9 @@ class Pipeline:
 
         for gone in self._last_ids - active:
             self._events.close_person(gone)
+            self._evidence.forget(gone)
+            self._open_vocab.forget(gone)
+            self.faces.forget(gone)
             self._smoother.reset(gone)
             self._stabilizer.reset(gone)
         self._last_ids = active

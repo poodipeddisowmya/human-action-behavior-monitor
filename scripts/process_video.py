@@ -32,9 +32,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import cv2  # noqa: E402
 
-from config import settings  # noqa: E402
-from src.input import FileSource  # noqa: E402
-from src.pipeline import Pipeline  # noqa: E402
+# config / the pipeline are imported where a clip is processed, not here.
+# Importing config initialises CUDA, and the batch parent below only spawns
+# one child per clip: holding an idle CUDA context there cost ~300 MB that a
+# Jetson (GPU memory = system RAM) needed for the models in the child.
 
 
 def _to_h264(src: Path) -> Path:
@@ -59,6 +60,10 @@ def process(video: Path, out_dir: Path, min_seconds: float = 0.0,
     the activity label has just settled. max_width > 0 downscales the output
     (a 2732 px source makes an unwieldy file to send)."""
     out_dir.mkdir(parents=True, exist_ok=True)
+    from config import settings
+    from src.input import FileSource
+    from src.pipeline import Pipeline
+
     source = FileSource(video, loop=min_seconds > 0)
     fps = source.fps or 25.0
     target = int(min_seconds * fps) if min_seconds > 0 else None

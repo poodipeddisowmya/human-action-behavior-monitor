@@ -18,7 +18,3 @@ huggingface-hub>=0.24.0
 # running application.
 scikit-learn==1.5.1
 
-# Legacy pose estimator (src/action_recognition/pose_estimator.py), superseded
-# by YOLOv8-pose which produces keypoints in the same pass as detection. The
-# module degrades gracefully when this is absent.
-mediapipe==0.10.14

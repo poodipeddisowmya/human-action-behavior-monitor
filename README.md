@@ -1,56 +1,55 @@
 # Human Action & Behavior Monitor
 
-Detects people in video, tracks them with stable IDs, recognises what they are
-doing, and streams the results to a live monitoring dashboard.
+Finds every person in a video, follows them with a stable ID, recognises what
+they are doing, names the people it has been taught to recognise, and logs
+every activity with photo proof, live on a web dashboard. Runs on a laptop, a
+cloud GPU, or an NVIDIA Jetson on site.
 
-Works on bundled demo clips, on any video you upload through the UI, or on a
-webcam — the server's own, or the viewer's own browser webcam.
+- **Activity recognition:** 15 everyday activities, 10 postures and movements.
+- **New activities without retraining:** *making tea* and *taking tablets*,
+  defined in words; *falling down* raises an alert.
+- **Face recognition:** "Asha is making tea"; anyone else stays Unknown, and
+  can be named from the dashboard with one click (with consent).
+- **Activity log with proof:** who, what, when, how long, and 2–3 photos.
+- **Hardware comparison:** the same clips on a laptop CPU, a Tesla T4 GPU and
+  a Jetson, side by side.
 
-**GPU:**
-[Client demo on Kaggle's free GPU](docs/KAGGLE_DEMO.md) ·
-[Production deployment (Docker)](docs/DEPLOYMENT.md) ·
-[Windows GPU machine](docs/GPU_DEMO.md)
+**Start here:** [Technical overview](docs/TECHNICAL_OVERVIEW.md), the whole
+project explained simply · [Client demo](docs/CLIENT_DEMO.md), the
+10-minute demo step by step.
 
 ---
 
-## Setup (Windows) — do this once
+## 1. Get the project
 
-You need **Python 3.10, 3.11 or 3.12** — [3.11 is the tested
-version](https://www.python.org/downloads/release/python-3119/). Tick
-**"Add Python to PATH"** during installation.
+You need **Git** and **Git LFS**: the model files and videos (~550 MB) are
+stored with Git LFS. Git for Windows includes it; on Linux install
+`git-lfs` from your package manager; on a Jetson `setup_jetson.sh` installs it.
 
-> **Not 3.13 or newer.** One of the pinned libraries has no prebuilt package
-> for 3.13+, so the install tries to compile from source and fails. `setup.bat`
-> checks this first and tells you, rather than letting you find out ten minutes
-> in.
-
-Then double-click:
-
-```
-setup.bat
+```bash
+git lfs install
+git clone https://github.com/poodipeddisowmya/human-action-behavior-monitor.git
+cd human-action-behavior-monitor
 ```
 
-It creates a virtual environment, installs everything, and runs a check that
-tells you plainly if anything is missing. Takes a few minutes the first time,
-mostly downloading PyTorch.
+Do not use GitHub's "Download ZIP": it leaves small pointer files instead of
+the models and videos. If you did, run `git lfs pull` in a clone.
 
-**You do not need Node.js or npm.** The dashboard is pre-built and served by
-the same Python process.
+## 2. Install and start
 
-### Start it
+Python **3.10, 3.11 or 3.12** ([3.11 recommended](https://www.python.org/downloads/release/python-3119/);
+3.13 and newer cannot install one of the pinned libraries).
 
-Double-click:
+| Machine | Install once | Start |
+|---|---|---|
+| Windows laptop or PC | double-click `setup.bat` | double-click `run.bat` |
+| Windows with an NVIDIA GPU | `setup_gpu.bat` ([guide](docs/GPU_DEMO.md)) | `run.bat` |
+| Linux or macOS | see below | `python scripts/run_pipeline.py` |
+| NVIDIA Jetson | `./setup_jetson.sh` ([guide](docs/JETSON.md)) | `./run_jetson.sh` |
+| Kaggle (free cloud GPU) | [guide](docs/KAGGLE_DEMO.md) | one notebook cell |
+| GPU server (Docker) | [guide](docs/DEPLOYMENT.md) | `docker compose up -d --build` |
 
-```
-run.bat
-```
-
-A browser opens at **http://localhost:8000**. That is the whole application —
-video, dashboard, and API on one port.
-
-Press `Ctrl+C` in the black window to stop it.
-
-### macOS / Linux
+Linux / macOS:
 
 ```bash
 python3 -m venv .venv
@@ -60,175 +59,120 @@ python scripts/verify_install.py
 python scripts/run_pipeline.py
 ```
 
----
+Then open **http://localhost:8000** (from another computer:
+`http://<this-computer's-address>:8000`). The dashboard opens on the
+**Overview**. You do not need Node.js: the dashboard is pre-built.
 
-## Using it
+`scripts/verify_install.py` checks everything (Python, packages, the large
+files, the model) and prints the fix for any problem.
 
-- **Switch clips** — the *Source* dropdown, top right. Switching is instant;
-  the models stay loaded.
-- **Upload your own video** — the *Upload* button. `.mp4`, `.avi`, `.mov`,
-  `.mkv`, `.webm`, up to 500 MB. It starts playing immediately.
-- **Webcam** — `python scripts/run_pipeline.py --source 0`
-- **A specific file** — `python scripts/run_pipeline.py --source path\to\video.mp4`
+### The new-activity demo clips
 
-Each tracked person gets a coloured box, a stable ID, the recognised action and
-a confidence figure. Completed actions accumulate in the events table with
-their start time and duration.
-
-The **CPU vs GPU** tab (`http://localhost:8000/#compare`) plays a recorded
-comparison: the same clips through the same software on a laptop CPU and on a
-GPU, side by side and frame-synced, with the measured figures. Install a
-recording with `python scripts/install_showcase.py dist/client-demo`.
-
-On a GPU the subtitle is a detailed description written by a small
-vision-language model (SmolVLM2) from the frames themselves, grounded in what
-the system detected; on a CPU it is the template sentence built from the
-labels ("A person is cooking in a kitchen.").
-
----
-
-## What it recognises
-
-Fifteen target activities, from a model pretrained on Kinetics-400:
-
-`brushing teeth` · `cleaning` · `cooking` · `cycling` · `dancing` · `drinking` ·
-`driving` · `eating` · `exercising` · `reading` · `smoking` · `swimming` ·
-`using computer` · `using phone` · `writing`
-
-Each is a group of Kinetics classes ([target_vocabulary.py](src/action_recognition/target_vocabulary.py)):
-"dancing" covers fifteen dance styles, "swimming" the three strokes. Adding an
-activity Kinetics already knows is one line there; one it does not know needs
-training on labelled footage.
-
-Plus body posture and motion from skeleton geometry, which works even when no
-target activity is in view:
-
-`standing` · `sitting` · `walking` · `running` · `lying` · `kneeling` ·
-`bending` · `crawling` · `push-up` · `falling`
-
-### Honest accuracy note
-
-Measured 2026-11-04 on the 15 labelled demo clips, **as the dashboard shows
-them** (real-time playback, `scripts/live_accuracy.py`):
-
-| Hardware | Correct | Correct label on screen after |
-|---|---|---|
-| NVIDIA Tesla T4 (Kaggle) | **15/15** | 0.5–2.3 s (cycling 5.8 s) |
-| Laptop CPU | 11/15 | 4–10 s; misses eating, smoking, cycling, walking |
-
-A GPU matters for accuracy, not just speed: the activity model gets several
-looks a second instead of one every 1.5 s, so its votes agree sooner.
-
-The offline harness below scores the first 120 frames per clip; on a CPU it
-runs slower than real time, which flatters the CPU (it gave 14/15 there).
-Use `--realtime` for numbers comparable to the live view:
+The clips for making tea, taking tablets and falling down are downloaded
+from their original sources, because their licences do not allow re-sharing
+them:
 
 ```bash
-python scripts/eval_offline.py --realtime                  # offline harness
-python scripts/live_accuracy.py --base http://127.0.0.1:8000  # against a running server
+python scripts/fetch_new_activity_clips.py
 ```
 
-These are demo clips the system was tuned on. On footage it has never seen
-(the four held-out phone clips) it scores 3/4 — it reads a drinking clip as
-sitting. The largest remaining improvement is **fine-tuning on real footage
-from the deployment site**; run that on a GPU once a few hundred labelled
-clips exist.
+Without them everything works, except the Overview's play buttons for those
+three activities.
 
-Playback runs at roughly real time on a normal laptop CPU (measured 15–22 FPS
-on 25 fps clips) and on a T4 GPU (detection 14–17 ms per frame).
+## 3. Using it
 
----
-
-## If something goes wrong
-
-Run the diagnostic first — it checks every dependency, weight file and folder
-permission, and prints a specific fix for each problem:
-
-```bash
-.venv\Scripts\python.exe scripts\verify_install.py
-```
-
-| Symptom | Cause and fix |
+| To | Do |
 |---|---|
-| `Python not found` | Python missing from PATH. Reinstall with "Add Python to PATH" ticked. |
-| `unsupported Python version` | You have 3.13+. Install 3.11, delete the `.venv` folder, run `setup.bat` again. |
-| Install fails compiling numpy | Same cause as above — wrong Python version. |
-| Page will not load | Server still starting — model loading takes ~10 s. Wait, then refresh. |
-| Port 8000 already in use | Something else has the port. `set API_PORT=8001` then `run.bat`. |
-| Boxes but no action labels | The detector must be a `-pose` model. Check `detector_weights` in `config/model_config.yaml`; the app prints a loud warning if it is wrong. |
-| Slow / stuttering video | Expected on an older CPU. Lower `detector_imgsz` to `320` in `config/model_config.yaml`. |
+| Watch a clip | **Source** menu (top right): clips grouped as New activities, Activities, Scenes |
+| Analyse your own video | **Upload** (mp4, avi, mov, mkv, webm; up to 500 MB) |
+| Use a camera | **Live camera** (USB camera on this computer), **Go live** (your browser's webcam), or start with `--source 0` |
+| Name a person | **Faces on screen**: type a name under their face; or **Known people → Add person** with 2–5 photos |
+| See the proof of an activity | Activity log → click a photo |
+| Compare the hardware | **CPU · T4 · Jetson** tab |
 
-Logs are written to `logs/monitor.log`.
+## 4. Results
 
----
+Measured on the same 29 labelled clips, 12 s each, as the screen showed them:
 
-## Configuration
+| | Laptop CPU | Tesla T4 | Jetson Orin Nano Super |
+|---|---:|---:|---:|
+| Activities clearly recognised | 1/29 | 21/29 | 22/29 |
+| Correct label on screen | 4% | 66% | 68% |
+| Playback speed | 18 fps | 24 fps | 22 fps |
 
-`config/model_config.yaml` — models and thresholds. The comments explain what
-each value was measured against; several are deliberately calibrated numbers
-rather than round guesses, so read the note before changing one.
+A GPU is what makes it accurate: the activity model looks several times a
+second instead of once every 1.5 s. Accuracy, limits and how to improve it
+on your own cameras: [Technical overview §10](docs/TECHNICAL_OVERVIEW.md#10-accuracy-and-limits).
 
-`.env` (optional, copy from `.env.example`) — `API_PORT`, `DEVICE`,
-`TARGET_FPS`, and `ACCESS_TOKEN` to password-protect a server reachable from
-other machines. Full list: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+## 5. Configuration
 
----
+- **`.env`** (copy from `.env.example`): `ACCESS_TOKEN` to password-protect
+  a server others can reach; `API_PORT`; `DEVICE` (auto, cuda, cpu);
+  `FACE_ID`, `OPEN_VOCAB`, `EVIDENCE` to switch features;
+  `EVIDENCE_RETENTION_DAYS` (default 30).
+- **`config/model_config.yaml`:** models and thresholds. Each value's
+  comment says what it was measured against; read it before changing one.
+  New activities described in words go under `open_vocab`.
 
-## How it works
+## 6. If something goes wrong
+
+Run `python scripts/verify_install.py` first (`.venv\Scripts\python.exe` on
+Windows). Then:
+
+| Symptom | Fix |
+|---|---|
+| `unsupported Python version` | Install Python 3.11, delete `.venv`, run setup again. |
+| "large files … are LFS pointers" | Install Git LFS, then `git lfs install` and `git lfs pull`. |
+| Page does not load | Models take ~10–30 s to load; wait, then refresh. |
+| Port 8000 in use | Set `API_PORT=8001` in `.env`. |
+| Slow or stuttering video | Expected on an older CPU; a GPU or Jetson fixes it. |
+| Names never appear | Nobody enrolled, or faces too small or turned away. |
+| Tea / tablets never appear | They need a GPU; check the log for `[open-vocab]`. |
+
+Logs: `logs/monitor.log`.
+
+## 7. Project layout
 
 ```
-video ─► YOLOv8-pose ─► ByteTrack ─► ┬─► skeleton rules ──┐
-        (detect +        (stable     │   (posture/motion) ├─► consensus ─► smoothing ─► events ─► UI
-         17 keypoints)    IDs)       └─► S3D / Kinetics ──┘     voting
-                                         (11 activities)
-```
-
-Two classifiers run against every tracked person. The skeleton rules are cheap
-and read geometry directly. The deep model reads pixels and scene context, and
-its 400 Kinetics classes are masked down to the 11 target activities — which
-yields both a confidence *and* a coverage figure saying whether the scene is
-one the system claims to handle at all. Results are pooled by weighted
-consensus over a rolling window, so a single noisy frame cannot flip a label.
-
-Full detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) ·
-[docs/MODEL_SELECTION.md](docs/MODEL_SELECTION.md) ·
-[docs/API.md](docs/API.md)
-
----
-
-## Project layout
-
-```
-├── setup.bat / run.bat      # one-time setup, and start
-├── config/                  # settings + model_config.yaml
-├── models/                  # bundled weights (YOLOv8-pose, S3D) — no download needed
-├── data/samples/            # demo clips, and where uploads land
+├── README.md, setup*.bat, run.bat,       start here; install and start
+│   setup_jetson.sh, run_jetson.sh
+├── config/            settings.py (environment), model_config.yaml (models, thresholds)
+├── docs/              technical overview, demo, architecture, models, guides
 ├── src/
-│   ├── input/               # video source abstraction (file / camera)
-│   ├── tracking/            # YOLOv8-pose + ByteTrack
-│   ├── action_recognition/  # skeleton rules + S3D, restricted vocabulary
-│   ├── temporal/            # smoothing + event generation
-│   ├── storage/             # SQLite via SQLAlchemy
-│   ├── api/                 # FastAPI, WebSocket, MJPEG, serves the UI
-│   └── pipeline/            # orchestrator
-├── ui/                      # React dashboard (dist/ is pre-built)
-├── scripts/                 # run, verify, evaluate, benchmark, batch-process, Kaggle launcher
-├── kaggle/                  # kaggle_demo.ipynb — one-click GPU demo
-├── Dockerfile, docker-compose.yml   # GPU production deployment
-└── tests/                   # pytest
+│   ├── input/         video sources: files, cameras, browser webcam
+│   ├── tracking/      person detection (YOLOv8-pose) and IDs (ByteTrack)
+│   ├── action_recognition/   activities, postures, objects, falls, text-defined activities
+│   ├── identity/      face recognition and enrolment
+│   ├── temporal/      smoothing, display stability, activity events
+│   ├── description/   subtitles and place recognition
+│   ├── storage/       database and proof photos
+│   ├── api/           web server, API, video stream
+│   └── pipeline/      runs every stage per frame
+├── ui/                dashboard (React); ui/dist is pre-built
+├── models/            model weights (Git LFS)
+├── data/samples/      demo clips (Git LFS); uploads land here
+├── data/showcase/     the recorded CPU / T4 / Jetson comparison (Git LFS)
+├── scripts/           tools: install check, evaluation, recording ([list](scripts/README.md))
+├── kaggle/            cloud GPU notebooks
+├── tests/             automated tests
+└── Dockerfile, docker-compose.yml
 ```
 
-## Development
+## 8. Development
 
 ```bash
-.venv\Scripts\python.exe -m pytest tests -q      # tests
-.venv\Scripts\python.exe scripts\eval_offline.py # accuracy on the demo set
+python -m pytest tests -q                    # automated tests
+python scripts/eval_offline.py --realtime    # accuracy on the demo clips
+cd ui && npm install && npm run build        # after changing the dashboard
 ```
 
-Changing the dashboard needs Node:
+Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · models and
+licences: [docs/MODEL_SELECTION.md](docs/MODEL_SELECTION.md) · API:
+[docs/API.md](docs/API.md), or `/docs` on a running server.
 
-```bash
-cd ui && npm install && npm run build
-```
+## Licences
 
-The Python server picks up `ui/dist` automatically on restart.
+Third-party models and clips keep their own licences
+([models](docs/MODEL_SELECTION.md#licences-to-check-before-a-commercial-deployment),
+[clips](data/showcase/CREDITS.md)). Before a commercial product: YOLOv8 is
+AGPL-3.0, and the VideoMAE weights used on GPUs are non-commercial.

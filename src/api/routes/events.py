@@ -5,6 +5,8 @@ from fastapi import APIRouter, Query
 from sqlalchemy import select
 
 from src.storage import ActionRecord, Person, get_session
+from src.storage.evidence import evidence_urls
+from src.utils.timefmt import utc_iso
 
 router = APIRouter()
 
@@ -26,12 +28,15 @@ async def recent_events(
         rows = (await s.execute(stmt)).all()
         return [
             {
+                "id": a.id,
                 "person_id": ext,
                 "label": a.label,
-                "start_time": a.start_time.isoformat(),
-                "end_time": a.end_time.isoformat(),
+                "start_time": utc_iso(a.start_time),
+                "end_time": utc_iso(a.end_time),
                 "duration_s": a.duration_s,
                 "confidence": a.confidence,
+                "evidence": evidence_urls(a),
+                "identity": a.identity,
             }
             for a, ext in rows
         ]

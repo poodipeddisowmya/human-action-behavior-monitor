@@ -6,6 +6,7 @@ persist events + push them onto the websocket broadcaster.
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import datetime
 from threading import Lock
 from typing import Optional
@@ -16,7 +17,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from config import settings
-from src.storage import ActionRecord, Person, get_session
+from src.storage import ActionRecord, Person, evidence, get_session
+from src.storage.evidence import evidence_urls
 from src.temporal.event_generator import ActionEvent
 from src.utils import get_logger
 
@@ -103,6 +105,10 @@ class Runtime:
     def on_event(self, event: ActionEvent) -> None:
         if self._loop is None:
             return
+        # "detecting…" is the placeholder before a person's first label, not
+        # an activity: logging it filled the events table with noise.
+        if event.label.startswith("detecting"):
+            return
         asyncio.run_coroutine_threadsafe(self._persist_and_publish(event), self._loop)
 
     async def _persist_and_publish(self, event: ActionEvent) -> None:
@@ -112,16 +118,28 @@ class Runtime:
                 person = await self._get_or_create_person(s, ext, event)
                 person.last_seen = event.end_time or datetime.utcnow()
 
-                s.add(ActionRecord(
+                record = ActionRecord(
                     person_id=person.id,
                     label=event.label,
                     start_time=event.start_time,
                     end_time=event.end_time or datetime.utcnow(),
                     duration_s=event.duration_s,
                     confidence=event.confidence,
-                ))
+                    identity=event.identity,
+                )
+                s.add(record)
+                await s.flush()                      # assigns record.id
+                if event.evidence:
+                    try:
+                        paths = await asyncio.to_thread(
+                            evidence.save, record.id, event.evidence, event.start_time)
+                        record.evidence = json.dumps(paths)
+                    except OSError as e:             # disk full etc.: keep the event
+                        log.warning(f"evidence not saved for event {record.id}: {e}")
                 await s.commit()
             broadcaster.publish({"type": "event", **event.to_dict(),
+                                 "id": record.id,
+                                 "evidence": evidence_urls(record),
                                  "person_id": f"P{event.person_id:03d}"})
         except Exception as e:
             log.exception(f"failed to persist event: {e}")
