@@ -44,7 +44,6 @@ class ModelConfig(BaseModel):
     detector_conf: float
     detector_iou: float
     tracker: str
-    pose_model: str
     action_classifier: str
     action_window: int
     action_stride: int

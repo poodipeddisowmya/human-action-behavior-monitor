@@ -1,13 +1,13 @@
-# Running the demo on the RTX 3050 machine
+# Running on a Windows PC with an NVIDIA GPU
 
 The app uses the NVIDIA GPU automatically when one is available. Nothing in
 the code or config needs editing.
 
-## 1. Copy the project
+## 1. Get the project
 
-Copy the `Human-Action-Behavior-Monitor` folder (or unzip
-`HumanActionMonitor-GPU-package.zip`) to the GPU machine. Leave out `.venv`
-— it is rebuilt there.
+Clone it with git as described in the [README](../README.md#1-get-the-project)
+(Git for Windows includes Git LFS), or copy an existing project folder
+without its `.venv` folder, which is rebuilt there.
 
 ## 2. One-time setup (about 15 minutes, needs internet)
 

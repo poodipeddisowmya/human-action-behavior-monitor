@@ -1,68 +1,43 @@
-# Model Selection Rationale
+# Models used, and why
 
-Selections follow the master brief's principle: **compare alternatives, choose the smallest option that meets the accuracy bar, justify with numbers.**
+Every model is pretrained and publicly available; none was trained on
+client data. All licences allow commercial use except where noted.
 
-## 1. Person Detection
-
-| Model | mAP50 (COCO person) | Latency (RTX 3060) | Weights | Choice |
+| Job | Model | Runs on | Licence | Why this one |
 |---|---|---|---|---|
-| YOLOv8n | ~37 | ~6 ms | 6 MB | **✅ default** |
-| YOLOv8s | ~44 | ~10 ms | 22 MB | Optional (higher accuracy path) |
-| RT-DETR-L | ~53 | ~28 ms | 66 MB | Overkill for single-class person |
-| Faster R-CNN R50 | ~55 | ~55 ms | 160 MB | Too slow for real-time |
+| Find people and their skeleton | YOLOv8n-pose (CPU), YOLOv8s-pose (GPU; TensorRT on a Jetson) | every frame | AGPL-3.0 (Ultralytics) | People and 17 body keypoints in one pass; the skeleton feeds posture, falls and face matching at no extra cost. |
+| Keep IDs stable | ByteTrack | every frame | MIT | Survives short occlusions without a separate re-identification model. |
+| Posture and motion | Skeleton rules (`action_classifier.py`) | every frame | this project | Sitting, standing, walking, lying… read directly from the joints: instant and explainable. |
+| Everyday activities | VideoMAE-base, Kinetics-400 (GPU); S3D, Kinetics-400 (CPU) | several looks a second | CC BY-NC 4.0 (VideoMAE weights); BSD (S3D, torchvision) | Strong video models for 400 actions, restricted here to the 15 target activities so unrelated classes never compete. |
+| Objects in hand | YOLOv8n (COCO) | with the activity model | AGPL-3.0 | A cup, phone or laptop near the hands confirms drinking, using a phone, using a computer. |
+| Place, and sitting/standing when legs are hidden | CLIP ViT-B/32 | every few seconds | MIT | Zero-shot: a place is one line of text. |
+| Activities never trained on | X-CLIP base/16, zero-shot | once a second (GPU) | MIT | A video transformer that scores video against text: "making tea", "taking tablets" are a description, not a training set. |
+| Falls | Fall rules (`fall_detector.py`) | every frame | this project | A fall is a change of state (upright → on the ground within ~1 s); 9 of 9 real falls, no false alarms on 43 other clips. |
+| Find faces | YuNet (OpenCV Zoo) | CPU, a few looks a second | MIT | Small and fast; runs in OpenCV with no extra dependency. |
+| Recognise faces | SFace (OpenCV Zoo) | CPU | Apache-2.0 | Accurate enough at the published 0.363 bar; InsightFace was rejected as non-commercial only. |
+| Detailed subtitles | SmolVLM2-500M-Video-Instruct | T4-class GPU | Apache-2.0 | Describes the scene from the frames, grounded in the detected labels. |
 
-**Why YOLOv8n**: single-class task, low latency budget, cheap deployment. Ultralytics ships stable ByteTrack integration so tracking adds zero extra model.
+## Licences to check before a commercial deployment
 
-## 2. Multi-Object Tracker
+- **Ultralytics YOLOv8 is AGPL-3.0.** Using it in a product that is not
+  itself open source needs an Ultralytics Enterprise licence, or a switch
+  to a permissively licensed detector.
+- **The VideoMAE Kinetics weights are CC BY-NC 4.0** (non-commercial). On a
+  commercial deployment use the S3D backend (`deep_backend: s3d`, BSD), or
+  fine-tune a permissive backbone on the client's own footage.
+- Everything else above allows commercial use.
 
-| Tracker | ID switches | Needs ReID model? | Choice |
-|---|---|---|---|
-| ByteTrack | low | no | **✅ default** |
-| DeepSORT | lowest | yes (extra ~30 MB, ~5 ms/person) | Optional for crowded scenes |
-| SORT | high | no | Too weak under occlusion |
+## Measured
 
-**Why ByteTrack**: keeps low-confidence detections alive across short occlusions, no ReID overhead, ships with ultralytics.
+On the same 29 labelled clips, 12 s each, as the screen showed them:
 
-## 3. Pose Estimation
+| | Laptop CPU | Tesla T4 | Jetson Orin Nano Super |
+|---|---:|---:|---:|
+| Clips clearly recognised | 1/29 | 21/29 | 22/29 |
+| Correct label on screen | 4% | 66% | 68% |
+| Playback speed | 18 fps | 24 fps | 22 fps |
 
-| Model | Latency/person | Accuracy | Choice |
-|---|---|---|---|
-| MediaPipe Pose Lite | ~5 ms CPU | good on full-body poses | **✅ default** |
-| MediaPipe Pose Heavy | ~20 ms CPU | best | Optional |
-| MMPose HRNet-W32 | ~15 ms GPU | best | Overkill, GPU-only |
-| MoveNet Lightning | ~4 ms | 17 kpts only | Feasible but fewer landmarks |
-
-**Why MediaPipe Pose Lite**: 33 landmarks (superior to MoveNet), runs on CPU, official Python bindings, no weight download needed.
-
-## 4. Action Recognition
-
-Compared families:
-
-| Family | Input | Accuracy (Kinetics) | Latency | Weights | Notes |
-|---|---|---|---|---|---|
-| Geometric heuristic on pose | pose window | limited (~70% on 8-class subset) | trivial | none | Zero-dep baseline; useful first-run demo. |
-| **ST-GCN** on pose | pose window | ~72% (NTU-60) | ~2 ms | ~5 MB | **✅ recommended production**: temporal-aware, tiny, robust to lighting. |
-| MoViNet-A2 | RGB clip | 78% | ~40 ms | 22 MB | Better accuracy, heavier. |
-| VideoMAE-B | RGB clip | 81% | ~120 ms | 350 MB | Best accuracy, too heavy for edge. |
-| SlowFast R50 | RGB clip | 76% | ~90 ms | 130 MB | Older, higher compute. |
-
-**Chosen strategy**: `SkeletonHeuristicClassifier` ships as guaranteed-working default. If `models/st_gcn_kinetics.pt` is present, the pipeline transparently upgrades to `STGCNClassifier`. VideoMAE remains a **plug-in path** for accuracy-critical deployments.
-
-Reasoning:
-- Skeleton-based classifiers are illumination-invariant and privacy-friendly (no raw pixel storage).
-- ST-GCN's ~5 MB footprint fits every deployment budget.
-- Heuristic backend ensures the demo works with zero downloads — critical for the "usable out of the box" requirement.
-
-## 5. Temporal Smoothing
-
-Rejected: HMM (over-engineered for 8 labels), Kalman filter on label indices (labels aren't ordinal).
-**Chosen**: sliding-window majority vote (window=5). Empirically kills the "standing/sitting/standing" flicker at negligible cost.
-
-## Dataset selection (small, task-relevant slices)
-
-- **UCF101**: standing/walking/running/sitting variety.
-- **HMDB51**: additional bending/picking-up examples.
-- **Le2i Fall Detection**: falling class (safety-critical).
-- **NTU RGB+D 60 (subset)**: skeleton ground truth for ST-GCN validation.
-
-Do **not** download in bulk. Pull only the label directories referenced in `config/model_config.yaml → action_labels`.
+The GPU matters for accuracy, not only speed: the activity model gets
+several looks a second instead of one every 1.5 s, so its votes agree
+sooner. Details: [JETSON.md](JETSON.md), [NEW_ACTIVITIES.md](NEW_ACTIVITIES.md),
+[FACE_RECOGNITION.md](FACE_RECOGNITION.md).
