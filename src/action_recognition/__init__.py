@@ -1,4 +1,3 @@
-from .pose_estimator import PoseEstimator, Pose
 from .action_classifier import (
     ActionPrediction,
     SkeletonHeuristicClassifier,
@@ -28,8 +27,6 @@ def _build_classifier():
 ActionClassifier = _build_classifier
 
 __all__ = [
-    "PoseEstimator",
-    "Pose",
     "ActionClassifier",
     "ActionPrediction",
     "SkeletonHeuristicClassifier",

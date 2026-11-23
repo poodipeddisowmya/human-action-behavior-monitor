@@ -23,10 +23,6 @@ model:
   # ByteTrack ships with ultralytics; robust to short occlusions, no ReID cost.
   tracker: bytetrack.yaml
 
-  # --- Pose (feeds skeleton-based action classifier) ---
-  # MediaPipe Pose (Lite): 33 landmarks, CPU-friendly, ~5 ms/person.
-  pose_model: mediapipe_pose_lite
-
   # --- Action classifier ---
   #   'videomae'  : pretrained Kinetics-400 model (~350 MB, 400 real activities
   #                 including cooking / reading / sleeping / dancing / etc.)

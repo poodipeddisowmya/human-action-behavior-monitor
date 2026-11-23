@@ -165,7 +165,12 @@ allows, and `ACCESS_TOKEN` on any server others can reach.
 
 ## Test clips and licences
 
-`data/new-activities/` (git-ignored; see its `SOURCES.md`): Mixkit (free
+The six demo clips are not in the repository; download them from their
+original sources with `python scripts/fetch_new_activity_clips.py` (into
+`data/samples/new-*.mp4`, git-ignored). Credits: `data/showcase/CREDITS.md`.
+
+The measurement clips were kept locally in `data/new-activities/`
+(git-ignored): Mixkit (free
 licence, raw files not to be re-shared) and Wikimedia Commons (CC BY / BY-SA)
 clips for the comparison, and 12 clips from the UR Fall Detection Dataset
 (CC BY-NC-SA 4.0, non-commercial research) used **only** to measure the

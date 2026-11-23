@@ -159,8 +159,8 @@ run-to-run noise (three clips moved, in both directions).
 | Shared memory | CPU and GPU share 8 GB, and CUDA allocations do not evict the page cache: models fail to load (`NvMapMemAlloc error 12`) while `free` shows GBs "available" | `run_jetson.sh` / `record_showcase.py` touch a 2 GB buffer first, which evicts it (no sudo) |
 | Idle CUDA contexts | The batch parent of `process_video.py` held ~300 MB of GPU memory while only waiting | It imports the app only in the per-clip worker |
 
-Memory: with the desktop and the Claude app open, ~4 GB is left for the
-monitor, which needs ~3 GB optimised. Close browsers and the software
+Memory: with the desktop and a few desktop applications open, ~4 GB is left
+for the monitor, which needs ~3 GB optimised. Close browsers and the software
 updaters before a run; a headless board has room for SmolVLM2 too.
 
 ## Reproduce the comparison
@@ -178,7 +178,7 @@ lists, per clip, any model that failed to load or failed a look.
 
 ## In the dashboard
 
-The **CPU vs GPU** tab (`http://<host>:8000/#compare`) shows all three side
+The **CPU · T4 · Jetson** tab (`http://<host>:8000/#compare`) shows all three side
 by side: laptop CPU, Tesla T4 and Jetson, the same clip playing in lock-step
 on each, with the totals above. The Jetson side is the current recording,
 added with:
