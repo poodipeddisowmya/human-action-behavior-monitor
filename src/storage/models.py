@@ -40,6 +40,9 @@ class ActionRecord(Base):
     # The enrolled person this was, if face recognition named them (the name
     # at the time: it survives the person being deleted from the gallery).
     identity: Mapped[str | None] = mapped_column(String(64), nullable=True, default=None)
+    # Where it was seen: the CCTV camera's name, "USB camera", or the video
+    # file. NULL on records from before this column existed.
+    source: Mapped[str | None] = mapped_column(String(128), nullable=True, default=None)
 
     person: Mapped["Person"] = relationship(back_populates="actions")
 

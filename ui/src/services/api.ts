@@ -13,6 +13,7 @@ export interface ActionHistoryEntry {
   confidence: number;
   evidence?: string[];       // proof image URLs (start, middle, end)
   identity?: string | null;  // enrolled person named by face recognition
+  source?: string | null;    // CCTV camera name, "USB camera", or the video file
 }
 
 export interface PersonDetail extends PersonSummary {
@@ -29,6 +30,35 @@ export interface EventMessage {
   confidence: number;
   evidence?: string[];       // proof image URLs (start, middle, end)
   identity?: string | null;  // enrolled person named by face recognition
+  source?: string | null;    // CCTV camera name, "USB camera", or the video file
+}
+
+// The Database tab (/api/database): the actions table as stored.
+export interface DatabaseRow extends EventMessage { id: number }
+export interface DatabaseStatus {
+  database: { engine: string; file: string | null; bytes: number | null };
+  tables: { actions: number; persons: number; known_people: number; face_samples: number };
+  named_actions: number;
+  written_last_minute: number;
+  written_last_hour: number;
+  last_write: string | null;
+  evidence: { folder: string; photos: number; bytes: number; retention_days: number };
+  rows: DatabaseRow[];
+}
+
+// Recorded demo videos (/api/recordings): the dashboard as recorded.
+export interface Recording {
+  file: string;
+  url: string;
+  title: string;
+  shows: string;          // what happens in the clip
+  labels: string[];       // what the monitor showed
+}
+export interface Recordings {
+  recorded: string | null;
+  device: string | null;
+  how: string | null;
+  videos: Recording[];
 }
 
 // A person in view with a clear face and no name (/api/known-people/on-screen).
@@ -68,14 +98,25 @@ export interface Clip {
   size_kb: number;
 }
 export interface Camera {
-  filename: string;      // "camera:0"
+  filename: string;      // "stream:Reception" (CCTV), "camera:0" (USB)
   name: string;
   description: string;
+  kind?: "cctv";
+}
+// Connection state of the CCTV camera playing.
+export interface CameraStatus {
+  camera: string;
+  host: string;
+  state: "live" | "connecting" | "no signal";
+  error: string | null;
+  since_s: number;
+  reconnects: number;
 }
 export interface SourcesResponse {
   clips: Clip[];
   cameras?: Camera[];
   current: string | null;
+  camera_status?: CameraStatus | null;
   browser_camera?: string;   // "browser:camera" — the viewer's own webcam
 }
 
@@ -138,10 +179,18 @@ export interface Showcase {
 
 export const BROWSER_CAMERA = "browser:camera";
 export const isLive = (s: string | null | undefined) =>
-  !!s && (s.startsWith("camera:") || s === BROWSER_CAMERA);
+  !!s && (s.startsWith("camera:") || s.startsWith("stream:") || s === BROWSER_CAMERA);
+// A camera attached to the server: CCTV over the network, or USB.
+export const isServerCamera = (s: string | null | undefined) =>
+  !!s && (s.startsWith("camera:") || s.startsWith("stream:"));
+// "stream:Reception" -> "Reception"
+export const cameraName = (s: string) =>
+  s.startsWith("stream:") ? s.slice(7) : s.startsWith("camera:") ? "USB camera" : s;
 
 export const api = {
   listPersons: () => json<PersonSummary[]>("/api/persons"),
+  recordings:  () => json<Recordings>("/api/recordings"),
+  database:    (limit = 25) => json<DatabaseStatus>(`/api/database?limit=${limit}`),
   getPerson:   (id: string) => json<PersonDetail>(`/api/persons/${id}`),
   recentEvents: (limit = 50) => json<EventMessage[]>(`/api/events?limit=${limit}`),
   videoUrl:    "/api/stream/video",

@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import dataclasses
 import time
 from datetime import datetime
 from threading import Event, Lock, Thread
@@ -17,7 +18,7 @@ from config import settings
 from src.action_recognition import ActionClassifier
 from src.description import SceneDescriber
 from src.input import VideoSource
-from src.input.video_source import is_live
+from src.input.video_source import is_live, source_name
 from src.action_recognition.fall_detector import FallDetector
 from src.action_recognition.open_vocab import OpenVocabRecognizer
 from src.identity.face_id import FaceIdentifier
@@ -96,6 +97,9 @@ class Pipeline:
         # Track which file the source is currently playing so we can detect a
         # live source switch and clear stale per-person state.
         self._current_source = self._source_key()
+        # The source open activities belong to. Lags _current_source during a
+        # switch, so activities closed by the switch keep the old source.
+        self._event_source = self._current_source
         # Read by /api/metrics and /api/ready. Plain values, written by the
         # pipeline threads only, so readers need no lock.
         self.stats: dict = {
@@ -183,6 +187,7 @@ class Pipeline:
             event.identity = self.faces.name(event.person_id)
         except Exception as e:                   # proof is optional, the event is not
             log.warning(f"evidence for {event.label} not taken: {e}")
+        event.source = source_name(self._event_source)
         self._on_event(event)
 
     def _handle_source_switch(self) -> None:
@@ -194,6 +199,7 @@ class Pipeline:
         """
         log.info(f"source switched -> {self._current_source}; clearing state")
         self._events.flush()                       # close open events honestly
+        self._event_source = self._current_source
         self._evidence.reset()
         self._open_vocab.reset()
         self._falls.reset()
@@ -407,6 +413,14 @@ class Pipeline:
             # tablets reads as drinking there; making tea as cooking).
             # Nothing outranks a fall.
             self._open_vocab.observe(t.person_id, image, t.xyxy, len(tracks) == 1)
+            if pred is not None:
+                # A phone at the ear read as smoking, a mug as eating:
+                # settled by X-CLIP's look at the same person.
+                checked = self._open_vocab.cross_check(t.person_id, len(tracks) == 1, pred.label)
+                if checked != pred.label:
+                    # Drop the caption detail: it described the old label.
+                    pred = dataclasses.replace(pred, label=checked, **(
+                        {"detail": None} if hasattr(pred, "detail") else {}))
             ov = self._open_vocab.current(t.person_id, len(tracks) == 1)
             if ov is not None and (pred is None or not pred.label.startswith("falling")):
                 pred = ov

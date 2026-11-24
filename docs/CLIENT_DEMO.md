@@ -1,4 +1,4 @@
-# Client demo (about 10 minutes)
+# Client demo (about 13 minutes)
 
 Everything is shown from the dashboard, starting on its **Overview** page.
 Written for the NVIDIA Jetson; on a laptop or a GPU server only the start
@@ -15,6 +15,11 @@ the system is and how it works, in plain words:
 3. **Decide who will be named.** Delete any test people in *Known people*.
    The demo shows naming someone live (step 3 below), so nobody needs to be
    enrolled in advance.
+4. **Connect the CCTV camera** if one is available: its sub-stream address in
+   `.env` as `CAMERA_RECEPTION=rtsp://…`, checked as in
+   [CCTV.md](CCTV.md#1-find-the-cameras-stream-address). Point it at a desk
+   or the pantry, 2.5–3 m high. Without one, step 5 uses the recorded office
+   clips.
 
 ## 30 minutes before
 
@@ -28,7 +33,8 @@ the system is and how it works, in plain words:
    ```bash
    PROBE_CAMERAS=0 ./run_jetson.sh --source data/samples/new-taking-tablets-1.mp4
    ```
-   For a live USB camera instead: `./run_jetson.sh --source 0`.
+   On the CCTV camera instead: `./run_jetson.sh --source Reception`; a USB
+   camera: `./run_jetson.sh --source 0`.
 4. **Open the dashboard from a laptop** on the same network:
    `http://<jetson-address>:8000` (`hostname -I` on the Jetson shows the
    address). Not through remote desktop: it re-encodes the screen and the
@@ -99,6 +105,27 @@ Scroll to the **Activity log**; click a photo.
 
 Click **Alerts** to show the fall.
 
+### 5. Your CCTV camera, stored as it happens (3 minutes)
+
+Overview, card 5: play **Phone call**, then **Office floor**.
+
+> "An Indian office, fed in as a CCTV camera would be. Desk work, a phone
+> call, a whole floor of people: each recognised live on this Jetson."
+
+Click **Watch the database fill**. In the Source menu pick the CCTV camera
+(or *Office → Floor* without one); have someone sit at the desk, make a
+call, then stand up and walk off.
+
+> "On the left, what the camera sees and what is going on now. The moment
+> an activity ends, it is written to the database: here is the row, with
+> the camera's name, who, how long, how sure, and the photos. The count of
+> rows and the database size go up as we watch. Your systems read the same
+> rows through the API."
+
+Optional: unplug the camera's network cable for ten seconds. The video
+shows **NO SIGNAL · RECONNECTING**, and it comes back by itself when the
+cable goes back in.
+
 ### Close (30 seconds)
 
 > "Next step: a few cameras on your site. We measure accuracy on your own
@@ -112,6 +139,8 @@ Click **Alerts** to show the fall.
 | Does video leave our building? | Not with the Jetson: everything runs on the device. |
 | Can it learn our activities? | Ones the base model knows: one line. Others: describe them in words (as with tea and tablets), or fine-tune on a few hundred of your clips. |
 | What about privacy? | Only people who agree are enrolled; others stay Unknown and their faces are never stored; enrolled people can be deleted at once. Proof photos are deleted after 30 days by default. |
+| Can it use our existing CCTV cameras? | Yes: any IP camera with an RTSP address (Hikvision, Dahua / CP Plus, Uniview, Axis…), one line each in `.env`. No new cameras or recorder needed; it reads the camera's second stream alongside your NVR. |
+| Where is the data? | In a database on the device (`logs/monitor.db`), proof photos in `data/evidence/`. Nothing is sent anywhere unless you connect a system to the API. |
 | How many cameras? | Each running monitor processes one video stream (about 22 fps on this Jetson). More cameras: one device per camera, or a larger GPU server running several monitors. |
 | Can it alert us? | Falls already show as alerts on the dashboard. Every event is also pushed live over the API, so an alarm, SMS or e-mail system can be connected with a small integration. |
 
@@ -122,6 +151,7 @@ Click **Alerts** to show the fall.
 | Making tea / taking tablets never appear | The log shows `[open-vocab] … failed`: free memory (step 2 above), restart. |
 | Play buttons on the Overview are grey | The clips are missing: `python scripts/fetch_new_activity_clips.py`. |
 | Names never appear | Faces too small or turned away; use the Classroom 4 phone clip. |
+| CCTV camera shows NO SIGNAL | Wrong address or password, or the camera is unreachable: test the address as in [CCTV.md](CCTV.md#1-find-the-cameras-stream-address); `logs/monitor.log` says why. |
 | Video stutters | You are on remote desktop: use the laptop's browser. |
 | The board restarts | Power: the official adapter and 25 W mode. |
 | The page does not open | Models take up to a minute to load after a start; then check the address. |

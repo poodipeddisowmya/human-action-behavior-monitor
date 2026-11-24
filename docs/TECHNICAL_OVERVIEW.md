@@ -112,7 +112,7 @@ The developer's view, with modules and threads:
 
 ## 5. The dashboard
 
-Open `http://<computer>:8000` in any browser. Three views:
+Open `http://<computer>:8000` in any browser. Four views:
 
 **Overview** (the opening page) — the four features, each with real results
 from this machine and a button that shows it working:
@@ -129,8 +129,13 @@ from this machine and a button that shows it working:
 - **Faces on screen** — unknown people in view, ready to be named;
 - **Known people** — enrolled people: add, add photos, delete;
 - **People seen recently**, with their history;
-- the **Source** menu (clips grouped as New activities, Activities,
-  Scenes) and **Upload**.
+- the **Source** menu (CCTV and USB cameras; clips grouped as New
+  activities, Activities, Scenes) and **Upload**.
+
+**Database** — what is stored, as it is stored: the `actions` table filling
+up live (each new row flashes), next to the camera's picture and the
+activities still in progress; the number of rows, people, named
+activities, proof photos and the database's size.
 
 **CPU · T4 · Jetson** — the recorded comparison: the same clip on the three
 machines side by side, frame-synced, with the measured figures.
@@ -173,7 +178,7 @@ Measured on the same 29 labelled clips, 12 s each, as the screen showed them:
 | Stop recognising a person | *Known people → delete*: removes every photo and record of their face. |
 | Add an activity described in words | One entry in `config/model_config.yaml` under `open_vocab.activities`: a name and a few descriptions ([NEW_ACTIVITIES.md](NEW_ACTIVITIES.md)). |
 | Add an activity the base model knows | One line in `src/action_recognition/target_vocabulary.py`. |
-| Use a camera | A USB camera: dashboard *Live camera*, or start with `--source 0`. The viewer's own webcam: *Go live*. Network (RTSP/IP) cameras need a small source adapter ([ARCHITECTURE.md](ARCHITECTURE.md#extending-it)). |
+| Use a camera | A CCTV / IP camera: one line in `.env` (`CAMERA_RECEPTION=rtsp://…`), then pick it in *Source* or start with `--source Reception` ([CCTV.md](CCTV.md)). A USB camera: *Live camera*, or `--source 0`. The viewer's own webcam: *Go live*. |
 | Analyse a recording | Dashboard *Upload*, or `scripts/process_video.py` for an annotated video and a report. |
 | Protect access | Set `ACCESS_TOKEN` in `.env`. |
 | Keep proof photos longer or shorter | `EVIDENCE_RETENTION_DAYS` in `.env` (default 30). |
@@ -241,6 +246,15 @@ What to expect, stated plainly:
   ~40 pixels wide to be recognised.
 - **Crowds:** people hidden behind others are tracked but labelled less
   reliably.
+- **Office footage** (19 clips of an Indian corporate office, measured on the
+  Jetson, 2026-11-23): desk work, typing, phone calls and paperwork are
+  recognised; the four mistakes found (a desk phone read as smoking, writing
+  as using a computer, a chat over mugs as making tea, a chair swivel as
+  running) were fixed by letting X-CLIP settle known confusions
+  ([office-demo](../data/office-demo/README.md)). Still wrong: mugs
+  sometimes read as eating, a pen held to the mouth as smoking.
+- **Not recognised as such:** talking, meetings and presentations; they show
+  as the posture (sitting, standing).
 - **Test footage:** these are public clips. Accuracy on the client's own
   cameras should be measured on site.
 

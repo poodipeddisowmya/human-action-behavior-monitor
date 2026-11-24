@@ -25,6 +25,7 @@ from src.input.video_source import (
     is_live,
     open_camera,
 )
+from src.input.network_camera import host_of, is_stream, stream_key, streams
 
 router = APIRouter()
 
@@ -76,7 +77,7 @@ _DESCRIPTIONS: dict[str, str] = {
 
 
 class SwitchRequest(BaseModel):
-    filename: str            # e.g. "store-aisle.mp4", or "camera:0" for a live camera
+    filename: str            # "store-aisle.mp4", "camera:0" (USB), "stream:Reception" (CCTV)
 
 
 # Cameras found on this machine, probed once. Opening a camera is slow
@@ -138,6 +139,13 @@ def _list_cameras() -> list[dict]:
     return _cameras
 
 
+def _network_cameras() -> list[dict]:
+    """CCTV / IP cameras from .env, by name; their addresses stay here."""
+    return [{"filename": stream_key(name), "name": name,
+             "description": f"CCTV camera · {host_of(url)}", "kind": "cctv"}
+            for name, url in streams().items()]
+
+
 @router.get("")
 async def list_sources() -> dict:
     samples = settings.data_dir / "samples"
@@ -160,7 +168,9 @@ async def list_sources() -> dict:
         cur = str(runtime.source.current)
         current = cur if is_live(cur) else Path(cur).name
 
-    return {"clips": clips, "cameras": _list_cameras(), "current": current,
+    return {"clips": clips, "cameras": _network_cameras() + _list_cameras(), "current": current,
+            # Connection state of the CCTV camera playing, if one is.
+            "camera_status": getattr(runtime.source, "camera_status", None),
             # The viewer's own webcam is always offered; the page decides
             # whether this browser can actually provide one (it needs HTTPS
             # or localhost, and a camera).
@@ -175,6 +185,12 @@ async def switch_source(req: SwitchRequest) -> dict:
         raise HTTPException(400, "current source does not support live switching")
 
     if is_browser(req.filename):
+        runtime.source.switch_to(req.filename)
+        return {"switched_to": req.filename}
+
+    if is_stream(req.filename):
+        if req.filename not in {c["filename"] for c in _network_cameras()}:
+            raise HTTPException(404, f"camera not found: {req.filename}")
         runtime.source.switch_to(req.filename)
         return {"switched_to": req.filename}
 

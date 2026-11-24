@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Maximize2, MapPin, Users, Video, VideoOff, Zap } from "lucide-react";
-import { api, BROWSER_CAMERA, isLive } from "../services/api";
+import { api, BROWSER_CAMERA, cameraName, CameraStatus, isLive } from "../services/api";
 import { useBrowserCamera } from "../hooks/useBrowserCamera";
 
 export interface Caption {
@@ -28,6 +28,7 @@ export default function VideoStream({
   // there is none — Kaggle, a cloud GPU — "Go live" uses this browser's
   // webcam instead and streams it to the server.
   const [serverCamera, setServerCamera] = useState<string | null>(null);
+  const [camStatus, setCamStatus] = useState<CameraStatus | null>(null);
   const lastClip = useRef<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -39,6 +40,7 @@ export default function VideoStream({
     api.listSources().then((r) => {
       setCurrent(r.current);
       setServerCamera(r.cameras?.[0]?.filename ?? null);
+      setCamStatus(r.camera_status ?? null);
       if (r.current && !isLive(r.current)) lastClip.current = r.current;
       else if (!lastClip.current && r.clips[0]) lastClip.current = r.clips[0].filename;
     }).catch(() => {});
@@ -99,10 +101,18 @@ export default function VideoStream({
     <div className="card overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <h2 className="font-semibold flex items-center gap-2">
-          {current === BROWSER_CAMERA ? "Your webcam" : live ? "Live camera" : "Video feed"}
-          {live && (
+          {current === BROWSER_CAMERA ? "Your webcam"
+            : current?.startsWith("stream:") ? <>{cameraName(current)} <span className="text-xs font-normal text-muted">CCTV · {camStatus?.host}</span></>
+            : live ? "Live camera" : "Video feed"}
+          {live && (!camStatus || camStatus.state === "live") && (
             <span className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wider bg-danger text-white">
               <span className="live-dot" /> LIVE
+            </span>
+          )}
+          {live && camStatus && camStatus.state !== "live" && (
+            <span title={camStatus.error ?? undefined}
+              className="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wider bg-warn text-black">
+              {camStatus.state === "connecting" ? "CONNECTING" : "NO SIGNAL · RECONNECTING"}
             </span>
           )}
         </h2>
@@ -122,7 +132,7 @@ export default function VideoStream({
             onClick={toggleLive}
             disabled={busy || cam.state === "starting"}
             title={live ? "Stop the live camera"
-              : serverCamera ? "Start live detection from the server's camera"
+              : serverCamera ? `Start live detection from ${cameraName(serverCamera)}`
               : "Start live detection from this device's webcam"}
             className={
               "flex items-center gap-1.5 px-2.5 py-1 rounded-md border font-semibold transition disabled:opacity-40 " +

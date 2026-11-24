@@ -1,0 +1,44 @@
+{
+  "recorded": "2026-11-23",
+  "device": "NVIDIA Jetson Orin Nano Super",
+  "how": "Each office clip was played into the monitor as a network camera (scripts/test_camera.py, read by the same code as an RTSP CCTV camera) and the dashboard's annotated video saved with scripts/record_live.py.",
+  "videos": [
+    {
+      "file": "office-floor.mp4",
+      "title": "Office floor",
+      "shows": "four people working at their desks, one walks past",
+      "labels": [
+        "using computer",
+        "sitting",
+        "walking"
+      ]
+    },
+    {
+      "file": "office-desk-work.mp4",
+      "title": "Desk work",
+      "shows": "typing at a desk while a colleague works behind",
+      "labels": [
+        "using computer",
+        "sitting"
+      ]
+    },
+    {
+      "file": "office-computer-work.mp4",
+      "title": "Computer work",
+      "shows": "working at a computer, pen in hand",
+      "labels": [
+        "using computer",
+        "reading"
+      ]
+    },
+    {
+      "file": "office-phone-call.mp4",
+      "title": "Phone call",
+      "shows": "a call on the desk phone",
+      "labels": [
+        "using phone",
+        "sitting"
+      ]
+    }
+  ]
+}

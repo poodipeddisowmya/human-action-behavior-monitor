@@ -152,7 +152,9 @@ _WITH_OBJECT: dict[tuple[str, str], str] = {
     ("drinking", "cup"): "drinking from a cup",
     ("drinking", "bottle"): "drinking from a bottle",
     ("drinking", "wine glass"): "drinking from a glass",
-    ("using computer", "laptop"): "working on a laptop",
+    # The detector calls desktop monitors and all-in-ones "laptop" too
+    # (an iMac in the office clips): "computer" is right for both.
+    ("using computer", "laptop"): "working on a computer",
     ("using computer", "keyboard"): "typing on a keyboard",
     ("using computer", "mouse"): "working on a computer",
     ("using phone", "cell phone"): "using a phone",

@@ -2,15 +2,20 @@
 
 Finds every person in a video, follows them with a stable ID, recognises what
 they are doing, names the people it has been taught to recognise, and logs
-every activity with photo proof, live on a web dashboard. Runs on a laptop, a
-cloud GPU, or an NVIDIA Jetson on site.
+every activity with photo proof, live on a web dashboard. Reads CCTV / IP
+cameras (RTSP), USB cameras or video files. Runs on a laptop, a cloud GPU, or
+an NVIDIA Jetson on site.
 
 - **Activity recognition:** 15 everyday activities, 10 postures and movements.
 - **New activities without retraining:** *making tea* and *taking tablets*,
   defined in words; *falling down* raises an alert.
 - **Face recognition:** "Asha is making tea"; anyone else stays Unknown, and
   can be named from the dashboard with one click (with consent).
-- **Activity log with proof:** who, what, when, how long, and 2–3 photos.
+- **Activity log with proof:** who, what, when, how long, which camera, and
+  2–3 photos, written to the database the moment each activity ends; the
+  **Database** tab shows the rows arriving live.
+- **CCTV cameras:** one line per camera in `.env`; reconnects by itself;
+  the password never leaves the server ([guide](docs/CCTV.md)).
 - **Hardware comparison:** the same clips on a laptop CPU, a Tesla T4 GPU and
   a Jetson, side by side.
 
@@ -76,8 +81,9 @@ them:
 python scripts/fetch_new_activity_clips.py
 ```
 
-Without them everything works, except the Overview's play buttons for those
-three activities.
+It also fetches four clips of an Indian corporate office (desk work, computer
+work, a phone call) for the Source menu's *Office* group. Without them
+everything works, except the Overview's play buttons for those clips.
 
 ## 3. Using it
 
@@ -85,7 +91,10 @@ three activities.
 |---|---|
 | Watch a clip | **Source** menu (top right): clips grouped as New activities, Activities, Scenes |
 | Analyse your own video | **Upload** (mp4, avi, mov, mkv, webm; up to 500 MB) |
-| Use a camera | **Live camera** (USB camera on this computer), **Go live** (your browser's webcam), or start with `--source 0` |
+| Use a CCTV camera | Add `CAMERA_RECEPTION=rtsp://…` to `.env`, then pick *Reception* in **Source**, or start with `--source Reception` ([guide](docs/CCTV.md)) |
+| Use another camera | **Live camera** (USB camera on this computer), **Go live** (your browser's webcam), or start with `--source 0` |
+| Watch the database fill | **Database** tab |
+| Record what the dashboard shows | `python scripts/record_live.py --seconds 30` |
 | Name a person | **Faces on screen**: type a name under their face; or **Known people → Add person** with 2–5 photos |
 | See the proof of an activity | Activity log → click a photo |
 | Compare the hardware | **CPU · T4 · Jetson** tab |
