@@ -16,6 +16,8 @@ from typing import Iterator
 import cv2
 import numpy as np
 
+from .network_camera import STREAM_PREFIX, StreamCapture, is_stream, streams
+
 
 @dataclass
 class Frame:
@@ -82,7 +84,8 @@ class FileSource(_OpenCVSource):
 
 
 class CameraSource(_OpenCVSource):
-    """Webcam or RTSP. Placeholder for the live-camera phase."""
+    """A webcam by index, read directly (no reconnects). The monitor itself
+    uses SwappableFileSource, which also handles CCTV cameras."""
     def __init__(self, index_or_url: int | str = 0):
         super().__init__(index_or_url)
 
@@ -123,8 +126,21 @@ def is_browser(target) -> bool:
     return str(target) == BROWSER_CAMERA
 
 
+def source_name(target) -> str | None:
+    """What a logged activity was seen on: the CCTV camera's name, "USB
+    camera", "Browser webcam", or the video file's name."""
+    t = str(target or "")
+    if is_stream(t):
+        return t[len(STREAM_PREFIX):]
+    if is_camera(t):
+        return "USB camera"
+    if is_browser(t):
+        return "Browser webcam"
+    return Path(t).name or None
+
+
 def is_live(target) -> bool:
-    return is_camera(target) or is_browser(target)
+    return is_camera(target) or is_browser(target) or is_stream(target)
 
 
 class BrowserFrameFeed:
@@ -261,6 +277,12 @@ class SwappableFileSource(VideoSource):
     def _open(path: Path):
         if is_browser(path):
             return _BrowserCapture()
+        if is_stream(path):
+            name = str(path)[len(STREAM_PREFIX):]
+            url = streams().get(name)
+            if url is None:
+                raise RuntimeError(f"Unknown network camera: {name} (add CAMERA_<NAME>= to .env)")
+            return StreamCapture(name, url)
         if is_camera(path):
             cap = open_camera(int(str(path)[len(CAMERA_PREFIX):]))
             if cap is None:
@@ -280,6 +302,12 @@ class SwappableFileSource(VideoSource):
     @property
     def fps(self) -> float:
         return self._fps
+
+    @property
+    def camera_status(self) -> dict | None:
+        """Connection state of the CCTV camera playing, if one is."""
+        cap = self._cap
+        return cap.status() if isinstance(cap, StreamCapture) else None
 
     def switch_to(self, new_path: str | Path) -> None:
         """Schedule a switch. Applied at the top of the next frame iteration."""
@@ -308,6 +336,13 @@ class SwappableFileSource(VideoSource):
                 t0 = time.monotonic()
 
             ok, img = self._cap.read()
+            if not ok and isinstance(self._cap, StreamCapture):
+                # The CCTV camera is away and reconnecting by itself. Show
+                # that, about once a second, rather than freeze on its last
+                # picture as if all were well.
+                if self._pending is not None:
+                    continue
+                ok, img = True, self._cap.no_signal_frame()
             if not ok:
                 if is_browser(self._current):
                     # The browser stopped sending. Brief gaps are normal

@@ -154,7 +154,7 @@ def test_object_of_another_activity_is_ignored():
 def test_long_activity_reports_its_duration():
     s = compose_sentence(["using computer"], "in an office",
                          details={"using computer": "laptop"}, duration_s=185)
-    assert s == "A person is working on a laptop in an office for about 3 minutes."
+    assert s == "A person is working on a computer in an office for about 3 minutes."
 
 
 def test_group_shared_posture_goes_in_the_head():

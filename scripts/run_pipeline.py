@@ -4,6 +4,8 @@ Usage:
     python scripts/run_pipeline.py                       # first bundled demo clip
     python scripts/run_pipeline.py --source data/samples/demo-eating.avi
     python scripts/run_pipeline.py --source 0            # webcam
+    python scripts/run_pipeline.py --source Reception    # CCTV camera named in .env
+    python scripts/run_pipeline.py --source rtsp://user:pass@192.168.1.64:554/stream2
 
 Then open http://localhost:8000 — the built UI is served from the same port,
 and any clip can be selected or uploaded from there.
@@ -21,6 +23,7 @@ import uvicorn
 from config import settings
 from src.api.main import app, set_pipeline_source
 from src.input import SwappableFileSource
+from src.input.network_camera import lookup, safe_url, streams
 
 
 def build_source_factory(target: str):
@@ -29,6 +32,17 @@ def build_source_factory(target: str):
     # and the camera opens with the tuned capture settings (open_camera).
     if target.isdigit():
         return lambda: SwappableFileSource(f"camera:{target}")
+    if target.startswith("camera:"):
+        return lambda: SwappableFileSource(target)
+    # A CCTV camera: by its name in .env (CAMERA_RECEPTION=... -> Reception)
+    # or by its address.
+    if "://" in target or not Path(target).exists():
+        key = lookup(target)
+        if key is None:
+            raise SystemExit(
+                f"No video file or camera called {target!r}. Cameras in .env: "
+                f"{', '.join(streams()) or 'none (add CAMERA_<NAME>=rtsp://...)'}")
+        return lambda: SwappableFileSource(key)
     return lambda: SwappableFileSource(target)
 
 
@@ -57,8 +71,9 @@ def default_source() -> str:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", default=None,
-                        help="video file or webcam index (e.g. '0'); "
-                             "defaults to the first bundled demo clip")
+                        help="video file, webcam index (e.g. '0'), CCTV camera name "
+                             "from .env, or rtsp:// address; defaults to the first "
+                             "bundled demo clip")
     parser.add_argument("--host", default=settings.api_host)
     parser.add_argument("--port", type=int, default=settings.api_port)
     args = parser.parse_args()
@@ -67,7 +82,8 @@ def main() -> None:
     set_pipeline_source(build_source_factory(source))
 
     url = f"http://localhost:{args.port}"
-    print(f"\n  Starting on {url}   (source: {Path(source).name}, device: {settings.device})")
+    shown = safe_url(source) if "://" in source else Path(source).name
+    print(f"\n  Starting on {url}   (source: {shown}, device: {settings.device})")
     print(f"  Open {url} in a browser. Ctrl+C to stop.\n", flush=True)
 
     uvicorn.run(app, host=args.host, port=args.port, log_level="info",

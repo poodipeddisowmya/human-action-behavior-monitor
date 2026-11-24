@@ -58,7 +58,27 @@ BACKGROUND: dict[str, list[str]] = {
     "sitting": ["sitting", "a person sitting on a chair"],
     "lying down": ["lying down", "a person lying on a bed or sofa"],
     "falling down": ["falling down", "a person falling to the floor"],
+    # Office scenes. Without these, the nearest description won: two
+    # colleagues chatting over mugs in a pantry read "making tea" 71% of
+    # the time, and a desk-phone call "smoking" (Pexels RDNE office clips,
+    # 2026-11-23).
+    "talking": ["people talking to each other", "two people having a conversation holding mugs"],
+    "phone call": ["talking on the phone", "a person holding a telephone to their ear"],
 }
+
+# The activity model's known confusions, and how X-CLIP settles them. A
+# handset at the ear and a cigarette look alike to it; so do sipping from a
+# mug and taking a bite, and writing on paper at a desk and typing (the
+# monitor in view decides it). When X-CLIP's recent looks at the same person
+# clearly favour another reading, that is the one shown:
+#   shown label -> {label instead: X-CLIP descriptions that support it}
+CROSS_CHECK: dict[str, dict[str, tuple[str, ...]]] = {
+    "smoking": {"using phone": ("phone call", "using phone")},
+    "eating": {"drinking": ("drinking", "talking")},
+    "using computer": {"writing": ("writing",), "reading": ("reading",)},
+}
+_CROSS_LOOKS_S = 6.0     # looks this recent count
+_CROSS_MARGIN = 1.5      # the other reading must score this many times higher
 
 _SPAN_S = 2.5           # a look covers this much video (as measured)
 _SHORT_SIDE = 320       # frames are kept at this size until a look
@@ -74,6 +94,7 @@ class _State:
     last_frame_at: float = 0.0
     last_look_at: float = 0.0
     scores: deque = field(default_factory=lambda: deque(maxlen=3))     # {activity: p}
+    looks: deque = field(default_factory=lambda: deque(maxlen=4))      # (t, {every name: p})
     label: str | None = None
     conf: float = 0.0
     supported_at: float = 0.0
@@ -285,6 +306,7 @@ class OpenVocabRecognizer:
             if st is None:
                 return
             st.scores.append({a: scores[a] for a in self.activities})
+            st.looks.append((now, scores))
             best = max(self.activities, key=lambda a: scores[a])
             top = max(scores, key=scores.get)
             print(f"[open-vocab] look {'scene' if key == _SCENE else f'P{key}'}: {best} {scores[best]:.2f}"
@@ -313,6 +335,26 @@ class OpenVocabRecognizer:
             # Scores of 0.35-0.9 are shares among ~20 descriptions; shown on
             # the activities' usual 0.5-0.95 scale.
             return ActionPrediction(label=st.label, confidence=round(min(0.95, 0.5 + st.conf / 2), 3))
+
+    def cross_check(self, person_id: int, single_person: bool, label: str) -> str:
+        """The label to show instead of `label`, if X-CLIP clearly disagrees
+        in a known confusion (CROSS_CHECK); else `label` unchanged."""
+        rule = CROSS_CHECK.get(label)
+        if rule is None or not self._ready:
+            return label
+        now = time.monotonic()
+        with self._lock:
+            st = self._states.get(_SCENE if single_person else person_id)
+            looks = [s for t, s in st.looks if now - t <= _CROSS_LOOKS_S] if st else []
+        if not looks:
+            return label
+        same = float(np.mean([s.get(label, 0.0) for s in looks]))
+        best, best_score = label, _CROSS_MARGIN * same
+        for instead, support in rule.items():
+            other = float(np.mean([max(s.get(n, 0.0) for n in support) for s in looks]))
+            if other >= best_score:
+                best, best_score = instead, other
+        return best
 
     def forget(self, person_id: int) -> None:
         with self._lock:

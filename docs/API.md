@@ -14,13 +14,14 @@ When `ACCESS_TOKEN` is set, every endpoint except `/api/health` needs it:
 |---|---|---|
 | GET | `/api/health` | The process answers (no token needed: for load balancers). |
 | GET | `/api/ready` | 200 when models are loaded and frames are flowing, else 503. |
-| GET | `/api/metrics` | FPS, detection time, people tracked, GPU memory, device. |
+| GET | `/api/metrics` | FPS, detection time, people tracked, GPU memory, device; `camera`: the CCTV camera's state (`live`, `connecting`, `no signal`), for how long, and reconnections. |
 
 ## Activity log
 
 | Method | Path | Returns |
 |---|---|---|
-| GET | `/api/events?limit=50&label=falling%20down` | Newest logged activities: person, name, activity, start, duration, confidence, proof photo URLs. |
+| GET | `/api/events?limit=50&label=falling%20down` | Newest logged activities: person, name, activity, start, duration, confidence, camera (`source`), proof photo URLs. |
+| GET | `/api/database?limit=25` | The database as stored (the dashboard's Database tab): newest rows of `actions` by id, row counts per table, rows written in the last minute and hour, database file and size, proof photos on disk. |
 | GET | `/api/persons` | Everyone tracked, newest first. |
 | GET | `/api/persons/{id}` | One person's activity history (`P001`). |
 | GET | `/api/evidence/{event_id}/{index}` | A proof photo (JPEG; 0 = start, 1 = middle, 2 = end). |
@@ -32,8 +33,8 @@ When `ACCESS_TOKEN` is set, every endpoint except `/api/health` needs it:
 | GET | `/api/stream/video` | The annotated video, MJPEG (use as an `<img src>`). |
 | GET | `/api/stream/snapshot` | The current annotated frame, one JPEG. |
 | GET | `/api/stream/live` | The labels on screen right now, per person. |
-| GET | `/api/sources` | Clips, cameras, and what is playing. |
-| POST | `/api/sources` | Switch source: `{"filename": "demo-cooking.mp4"}` or `"camera:0"`. |
+| GET | `/api/sources` | Clips, cameras (CCTV by name, USB), what is playing, and the CCTV camera's state. |
+| POST | `/api/sources` | Switch source: `{"filename": "demo-cooking.mp4"}`, `"stream:Reception"` (CCTV, [CCTV.md](CCTV.md)) or `"camera:0"` (USB). |
 | POST | `/api/sources/upload` | Upload a video (multipart `file`; mp4/avi/mov/mkv/webm, ≤ 500 MB). |
 
 ## Face recognition

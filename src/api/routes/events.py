@@ -37,6 +37,7 @@ async def recent_events(
                 "confidence": a.confidence,
                 "evidence": evidence_urls(a),
                 "identity": a.identity,
+                "source": a.source,
             }
             for a, ext in rows
         ]

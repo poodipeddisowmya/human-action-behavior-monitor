@@ -26,6 +26,8 @@ class ActionEvent:
     evidence: list[bytes] = field(default_factory=list, repr=False)
     # The enrolled person face recognition named, if any.
     identity: str | None = None
+    # Where it was seen: CCTV camera name, "USB camera", or the video file.
+    source: str | None = None
 
     @property
     def duration_s(self) -> float:
@@ -46,6 +48,7 @@ class ActionEvent:
             "duration_s": self.duration_s,
             "confidence": self.confidence,
             "identity": self.identity,
+            "source": self.source,
         }
 
 

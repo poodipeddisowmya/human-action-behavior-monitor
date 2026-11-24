@@ -1,21 +1,23 @@
 import { useEffect, useState } from "react";
 import Dashboard from "./components/Dashboard";
 import Compare from "./components/Compare";
+import DatabaseView from "./components/DatabaseView";
 import Overview, { Go } from "./components/Overview";
 import SourceSelector from "./components/SourceSelector";
 import SystemStatus from "./components/SystemStatus";
 import { Activity } from "lucide-react";
 
-type Tab = "overview" | "live" | "compare";
+type Tab = "overview" | "live" | "database" | "compare";
 const TABS: { key: Tab; label: string }[] = [
   { key: "overview", label: "Overview" },
   { key: "live", label: "Live monitor" },
+  { key: "database", label: "Database" },
   { key: "compare", label: "CPU · T4 · Jetson" },
 ];
-// Each view is linkable: #live, #compare; no hash opens the overview.
+// Each view is linkable: #live, #database, #compare; no hash opens the overview.
 const fromHash = (): Tab => {
   const h = location.hash.slice(1);
-  return h === "compare" || h === "live" ? h : "overview";
+  return h === "compare" || h === "live" || h === "database" ? h : "overview";
 };
 
 export default function App() {
@@ -64,7 +66,7 @@ export default function App() {
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-6">
-            {tab === "live" && <SourceSelector />}
+            {(tab === "live" || tab === "database") && <SourceSelector />}
             <SystemStatus />
           </div>
         </div>
@@ -75,6 +77,7 @@ export default function App() {
             down by a look at the other views. */}
         <div hidden={tab !== "live"}><Dashboard /></div>
         {tab === "overview" && <Overview go={go} />}
+        {tab === "database" && <DatabaseView />}
         {tab === "compare" && <Compare />}
       </main>
     </div>
