@@ -11,7 +11,9 @@ full; `--help` lists its options.
 |---|---|
 | `verify_install.py` | Checks a new installation and prints the fix for anything missing. Run it first. |
 | `run_pipeline.py` | Starts the monitor and dashboard (`--source <clip>`, `--source 0` for a camera). |
-| `fetch_new_activity_clips.py` | Downloads the making-tea, taking-tablets and falling-down demo clips from their original sources. |
+| `fetch_new_activity_clips.py` | Downloads the demo clips not in the repository from their sources: making tea, taking tablets, falling down, and the Indian office set. |
+| `record_live.py` | Records what the dashboard shows (boxes, names, subtitles) to MP4, from whatever is playing. |
+| `test_camera.py` | Plays a video file as a network camera, to rehearse the CCTV path without one ([CCTV.md](../docs/CCTV.md)). |
 | `download_models.py` | Downloads model weights again, if any are missing. |
 | `process_video.py` | Processes a video file offline into an annotated video and an activity report. |
 | `live_window.py` | Watches a running monitor in a desktop window instead of a browser. |

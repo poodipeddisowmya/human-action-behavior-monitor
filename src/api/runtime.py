@@ -126,6 +126,7 @@ class Runtime:
                     duration_s=event.duration_s,
                     confidence=event.confidence,
                     identity=event.identity,
+                    source=event.source,
                 )
                 s.add(record)
                 await s.flush()                      # assigns record.id

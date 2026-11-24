@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import clsx from "clsx";
 import {
-  ArrowRight, Camera, Cpu, Images, PersonStanding, Play, ScanFace, ShieldCheck, Sparkles, UserRound,
+  ArrowRight, Camera, Cctv, Cpu, Database, Images, PersonStanding, Play, ScanFace, ShieldCheck, Sparkles, UserRound,
 } from "lucide-react";
-import { api, EventMessage, KnownPerson, Showcase, ShowcaseTotals } from "../services/api";
+import { api, Camera as Cam, EventMessage, KnownPerson, Recordings, Showcase, ShowcaseTotals } from "../services/api";
 import { NEW_ACTIVITIES, NEW_LABELS } from "../services/clips";
 import EvidenceViewer from "./EvidenceViewer";
 import { knownPeopleChanged } from "./KnownPeople";
@@ -12,7 +12,7 @@ import { knownPeopleChanged } from "./KnownPeople";
 // The demo's front page: the four things the system does, each with real
 // results from this machine and a button that shows it working.
 
-export type Go = (tab: "overview" | "live" | "compare", then?: "log" | "people") => void;
+export type Go = (tab: "overview" | "live" | "database" | "compare", then?: "log" | "people") => void;
 
 // Body postures from the skeleton: logged too, but not what a client came to see.
 const POSTURES = ["standing", "sitting", "walking", "running", "lying", "kneeling", "bending", "crawling", "falling", "push-up"];
@@ -104,10 +104,17 @@ export default function Overview({ go }: { go: Go }) {
   const [clips, setClips] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
   const [open, setOpen] = useState<{ event: EventMessage; index: number } | null>(null);
+  const [recs, setRecs] = useState<Recordings | null>(null);
+  const [rec, setRec] = useState(0);
+  const [cctv, setCctv] = useState<Cam[]>([]);
 
   useEffect(() => {
     api.showcase().then(setShow).catch(() => {});
-    api.listSources().then((r) => setClips(new Set(r.clips.map((c) => c.filename)))).catch(() => {});
+    api.recordings().then(setRecs).catch(() => {});
+    api.listSources().then((r) => {
+      setClips(new Set(r.clips.map((c) => c.filename)));
+      setCctv((r.cameras ?? []).filter((c) => c.kind === "cctv"));
+    }).catch(() => {});
     const loadPeople = () => api.knownPeople().then(setPeople).catch(() => {});
     const loadEvents = () => api.recentEvents(400).then(setEvents).catch(() => {});
     loadPeople(); loadEvents();
@@ -325,6 +332,40 @@ export default function Overview({ go }: { go: Go }) {
             </div>
           ) : <p className="text-sm text-muted">No activity logged yet: play a clip in the live monitor.</p>}
         </Section>
+
+        <div className="xl:col-span-2">
+          <Section n={5} icon={<Cctv size={18} />} title="An Indian office, through a CCTV camera input"
+            lead="Office footage played into the monitor as a network camera, the way a CCTV camera connects: recognised live on the Jetson, and every activity written to the database as it ends."
+            actions={<>
+              <Action primary onClick={() => go("database")}><Database size={14} /> Watch the database fill</Action>
+              {cctv[0] && <Action onClick={() => play(cctv[0].filename)}><Cctv size={14} /> Live: {cctv[0].name}</Action>}
+              {clips.has("office-floor.mp4") && <Action onClick={() => play("office-floor.mp4")}><Play size={14} /> Play the office clips</Action>}
+            </>}>
+            {recs && recs.videos.length > 0 ? (
+              <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+                <div>
+                  <video key={recs.videos[rec].url} src={recs.videos[rec].url} controls autoPlay muted loop playsInline
+                    className="w-full rounded-lg border border-border bg-black aspect-video" />
+                  <p className="mt-2 text-sm"><span className="font-medium">{recs.videos[rec].title}:</span>{" "}
+                    <span className="text-muted">{recs.videos[rec].shows}. Shown: {recs.videos[rec].labels.join(", ")}.</span></p>
+                  {recs.how && <p className="mt-1 text-xs text-muted">{recs.how}{recs.recorded ? ` Recorded ${recs.recorded}` : ""}{recs.device ? ` on ${recs.device}.` : "."}</p>}
+                </div>
+                <ul className="grid grid-cols-2 gap-2 self-start lg:grid-cols-1">
+                  {recs.videos.map((v, i) => (
+                    <li key={v.file}>
+                      <button onClick={() => setRec(i)}
+                        className={clsx("w-full rounded-md border px-3 py-2 text-left text-sm transition",
+                          i === rec ? "border-accent bg-accent/10 text-accent" : "border-border hover:border-accent")}>
+                        <div className="font-medium">{v.title}</div>
+                        <div className="truncate text-xs text-muted capitalize">{v.labels.join(" · ")}</div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : <p className="text-sm text-muted">No recordings on this machine (they are stored with Git LFS: <span className="font-mono">git lfs pull</span>).</p>}
+          </Section>
+        </div>
       </div>
 
       {open && <EvidenceViewer event={open.event} start={open.index} onClose={() => setOpen(null)} />}

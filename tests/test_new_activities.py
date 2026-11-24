@@ -107,3 +107,29 @@ def test_open_vocab_one_strong_look_confirms():
     r = _recognizer()
     r._vote(0, {"taking tablets": 0.05, "making tea": 0.78})
     assert r.current(1, single_person=True).label == "making tea"
+
+
+def test_cross_check_settles_known_confusions():
+    """A phone at the ear read as smoking, a mug as eating: X-CLIP's looks decide."""
+    import time
+    from src.action_recognition.open_vocab import OpenVocabRecognizer, _State
+    ov = OpenVocabRecognizer.__new__(OpenVocabRecognizer)
+    import threading
+    ov._lock, ov._states, ov._ready = threading.Lock(), {}, True
+    st = ov._states.setdefault(5, _State())
+    st.looks.append((time.monotonic(), {"smoking": 0.10, "phone call": 0.40, "using phone": 0.05,
+                                         "eating": 0.30, "drinking": 0.20, "talking": 0.05}))
+    assert ov.cross_check(5, False, "smoking") == "using phone"     # 0.40 >= 1.5 x 0.10
+    assert ov.cross_check(5, False, "eating") == "eating"           # 0.20 <  1.5 x 0.30
+    assert ov.cross_check(5, False, "sitting") == "sitting"         # not a known confusion
+    assert ov.cross_check(9, False, "smoking") == "smoking"         # no looks at this person
+    st.looks.append((time.monotonic(), {"using computer": 0.10, "writing": 0.50, "reading": 0.30,
+                                         "smoking": 0.10, "phone call": 0.40}))
+    assert ov.cross_check(5, False, "using computer") == "writing"  # the stronger alternative
+
+
+def test_no_running_without_an_upright_skeleton():
+    from src.action_recognition.action_classifier import SkeletonHeuristicClassifier, _WALK_MAX
+    c = SkeletonHeuristicClassifier.__new__(SkeletonHeuristicClassifier)
+    assert c._motion_label(_WALK_MAX * 3).label == "running"
+    assert c._motion_label(_WALK_MAX * 3, degraded=True, allow_run=False).label == "walking"

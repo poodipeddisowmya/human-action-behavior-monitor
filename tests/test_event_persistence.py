@@ -88,3 +88,21 @@ async def test_concurrent_events_distinct_people(fresh_db):
 
     assert n_people == 8
     assert n_actions == 8
+
+
+@pytest.mark.asyncio
+async def test_database_view_shows_rows_as_stored_with_their_camera(fresh_db):
+    """The Database tab: newest row first, with the camera it was seen on."""
+    from src.api.routes.database import database
+    rt = Runtime()
+    for i, (label, cam) in enumerate([("walking", "Reception"), ("using phone", "Pantry")]):
+        e = _event(3, label, i)
+        e.source = cam
+        await rt._persist_and_publish(e)
+
+    out = await database(limit=10)
+    assert out["tables"]["actions"] == 2 and out["tables"]["persons"] == 1
+    assert [r["label"] for r in out["rows"]] == ["using phone", "walking"]
+    assert out["rows"][0]["source"] == "Pantry" and out["rows"][0]["person_id"] == "P003"
+    assert out["database"]["engine"] == "SQLite" and out["database"]["bytes"] > 0
+    assert out["written_last_minute"] == 2

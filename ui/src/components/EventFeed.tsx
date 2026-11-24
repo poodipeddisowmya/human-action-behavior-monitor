@@ -79,7 +79,10 @@ export default function EventFeed({ events, onSelect }: Props) {
                     <span className="ml-1.5 rounded bg-accent/20 px-1 align-middle text-[10px] font-semibold not-italic text-accent">NEW</span>
                   )}
                 </td>
-                <td className="px-4 py-2 font-mono text-muted">{format(new Date(e.start_time), "HH:mm:ss")}</td>
+                <td className="px-4 py-2 font-mono text-muted">
+                  {format(new Date(e.start_time), "HH:mm:ss")}
+                  {e.source && <div className="font-sans text-[11px] truncate max-w-[10rem]" title={e.source}>{e.source}</div>}
+                </td>
                 <td className="px-4 py-2 tabular-nums text-muted">{e.duration_s.toFixed(1)} s</td>
                 <td className="px-4 py-2 tabular-nums text-muted">{Math.round(e.confidence * 100)}%</td>
                 <td className="px-4 py-1.5">

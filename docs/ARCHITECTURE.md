@@ -35,7 +35,7 @@ view: the stages, the modules, the threads, and where to extend it.
 
 | Folder | What it does |
 |---|---|
-| `src/input/` | Video sources behind one interface: files, USB cameras, the viewer's browser webcam; switchable at runtime without reloading models. |
+| `src/input/` | Video sources behind one interface: files, CCTV / IP cameras (RTSP, HTTP; reconnecting), USB cameras, the viewer's browser webcam; switchable at runtime without reloading models. |
 | `src/tracking/` | YOLOv8-pose detection (PyTorch, or a TensorRT engine on a Jetson) and ByteTrack IDs. |
 | `src/action_recognition/` | Skeleton rules, the Kinetics activity model restricted to the target vocabulary, object context, CLIP posture check, open-vocabulary X-CLIP, fall detector. |
 | `src/identity/` | Face recognition (YuNet + SFace) and enrolment, with its safeguards. |
@@ -91,6 +91,7 @@ view: the stages, the modules, the threads, and where to extend it.
 | An activity described in words | One entry under `open_vocab.activities` in `config/model_config.yaml` ([NEW_ACTIVITIES.md](NEW_ACTIVITIES.md)) |
 | A person to recognise | The dashboard: Faces on screen, Known people, or a proof photo |
 | A place for the subtitles | One line in `_PLACES` in `src/description/scene.py` |
-| A video input (RTSP, …) | A `VideoSource` subclass in `src/input/video_source.py` |
+| A CCTV / IP camera | One `CAMERA_<NAME>=rtsp://…` line in `.env` ([CCTV.md](CCTV.md)) |
+| Another kind of video input | A capture class beside `StreamCapture` (`src/input/network_camera.py`), opened in `SwappableFileSource._open` |
 | Another database | `DATABASE_URL` (async SQLAlchemy 2) |
 | Another hardware device in the comparison | `scripts/add_showcase_side.py` ([JETSON.md](JETSON.md)) |

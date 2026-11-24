@@ -95,6 +95,16 @@ def _env_bool(name: str, default: bool = False) -> bool:
     return os.getenv(name, str(default)).split("#")[0].strip().lower() in ("1", "true", "yes", "on")
 
 
+def _network_cameras() -> dict[str, str]:
+    """CCTV / IP cameras from .env: CAMERA_FRONT_DESK=rtsp://... -> "Front Desk"."""
+    cams = {}
+    for key, value in sorted(os.environ.items()):
+        if key.startswith("CAMERA_") and "://" in value:
+            name = key[len("CAMERA_"):].replace("_", " ").strip().title()
+            cams[name] = value.strip()
+    return cams
+
+
 def is_jetson() -> bool:
     """An NVIDIA Jetson (integrated GPU sharing the CPU's memory)."""
     return Path("/etc/nv_tegra_release").exists()
@@ -177,6 +187,9 @@ class Settings(BaseModel):
     # the browser's own webcam is offered there instead.
     probe_cameras: bool = Field(default_factory=lambda: _env_bool(
         "PROBE_CAMERAS", default=os.name == "nt" or bool(os.getenv("DISPLAY"))))
+    # CCTV / IP cameras by name, from CAMERA_<NAME>=rtsp://... lines in .env
+    # (src/input/network_camera.py). Their addresses never leave the server.
+    network_cameras: dict[str, str] = Field(default_factory=_network_cameras)
 
     # Proof images for logged activities (src/storage/evidence.py): up to
     # three annotated shots of the person per event, kept this many days.

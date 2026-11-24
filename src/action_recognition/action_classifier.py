@@ -250,7 +250,11 @@ class SkeletonHeuristicClassifier:
         # when joints are unreadable is their motion state, at reduced
         # confidence to reflect that posture could not be verified.
         if kp is None or not _skeleton_is_plausible(kp):
-            return self._motion_label(speed, degraded=True, approach=approach)
+            # Running is only claimed with an upright skeleton behind it: a
+            # close-up at a desk (no legs in view) moves its box fast with
+            # every lean and turn.
+            return self._motion_label(speed, degraded=True, approach=approach,
+                                      allow_run=False)
 
         # Check crawling / push-up BEFORE lying — both have a horizontal
         # torso, but their intent is different (crawling has hands and knees
@@ -270,7 +274,12 @@ class SkeletonHeuristicClassifier:
         # ----- kneeling / bending (posture-based) -----
         if posture and posture[0] in ("sitting", "kneeling", "bending"):
             if speed > _WALK_MAX:
-                return self._motion_label(speed)
+                # Moving fast while the skeleton reads seated or bent: most
+                # likely a posture misread of someone walking, or someone
+                # swivelling in an office chair. Never "running": in
+                # the office clips (Pexels RDNE set, 2026-11-23) that was a
+                # seated typist read as running 13% of the time.
+                return self._motion_label(speed, allow_run=False)
             return ActionPrediction(*posture)
 
         # NOTE: hand-based rules (drinking / using phone / waving / clapping /
@@ -488,7 +497,7 @@ class SkeletonHeuristicClassifier:
 
     # ------------------------------------------------------------------
     def _motion_label(self, speed: float, degraded: bool = False,
-                      approach: float = 0.0) -> ActionPrediction:
+                      approach: float = 0.0, allow_run: bool = True) -> ActionPrediction:
         """Motion state from bounding-box trajectory alone.
 
         `degraded` means the skeleton was unreadable, so this is a motion
@@ -508,7 +517,8 @@ class SkeletonHeuristicClassifier:
             # quietly deflated confidence on every genuinely still person.)
             conf = _score(_STAND_MAX - speed, spread=_STAND_MAX, base=0.60)
             label = "standing"
-        elif speed < _WALK_MAX:
+        elif speed < _WALK_MAX or not allow_run:
+            speed = min(speed, _WALK_MAX)
             mid = (_STAND_MAX + _WALK_MAX) / 2
             proximity = 1.0 - abs(speed - mid) / (_WALK_MAX - _STAND_MAX) * 2
             conf = _score(proximity, spread=1.0, base=0.65)

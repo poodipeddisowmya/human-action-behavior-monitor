@@ -1,10 +1,12 @@
-"""Download the demo clips for the new activities (making tea, taking tablets,
-falling down) from their original sources into data/samples/.
+"""Download the demo clips that are not in the repository into data/samples/:
+the new activities (making tea, taking tablets, falling down) and the Indian
+corporate office set (desk work, phone call, paperwork), from their sources.
 
 They are not in the repository: the stock footage's licences let anyone
 download and use it, but not re-share the raw files. This fetches each one
 from its source, converts it to .mp4 where needed, and names it so the
-dashboard's Overview and Source menu pick it up (new-*.mp4, git-ignored).
+dashboard's Overview and Source menu pick it up (new-*.mp4 and office-*.mp4,
+git-ignored).
 Attribution: data/showcase/CREDITS.md.
 
     python scripts/fetch_new_activity_clips.py            # missing clips only
@@ -25,6 +27,14 @@ ROOT = Path(__file__).resolve().parents[1]
 # (file in data/samples, source file URL, page to download it by hand,
 #  what it shows, licence)
 _COMMONS = "https://commons.wikimedia.org/wiki/File:"
+_PEXELS = "https://www.pexels.com/video/"
+
+
+def _rdne(name: str, pexels_id: int, slug: str, what: str) -> tuple:
+    """One clip of the Indian corporate office set (RDNE Stock project, Pexels)."""
+    return (name, f"https://videos.pexels.com/video-files/{pexels_id}/{pexels_id}-hd_1280_720_30fps.mp4",
+            f"{_PEXELS}{slug}-{pexels_id}/", what, "Pexels License")
+
 CLIPS = [
     ("new-taking-tablets-1.mp4", "https://assets.mixkit.co/videos/46792/46792-720.mp4",
      "https://mixkit.co/free-stock-video/elderly-man-takes-pills-to-control-his-illnesses-46792/",
@@ -45,6 +55,16 @@ CLIPS = [
      "https://upload.wikimedia.org/wikipedia/commons/5/59/How_Nomads_prepare_Moroccan_tea.webm",
      _COMMONS + "How_Nomads_prepare_Moroccan_tea.webm", "Moroccan tea prepared outdoors",
      "CC BY-SA 4.0"),
+    # Indian corporate office. Chosen from 19 clips of the set measured on
+    # the Jetson (2026-11-23): these four are labelled correctly on screen
+    # (data/office-demo/README.md says which were not, and why).
+    _rdne("office-floor.mp4", 7581202, "people-working-on-office-using-computer",
+          "four people working at their desks"),
+    _rdne("office-desk-work.mp4", 7581201, "man-analyzing-documents", "typing at a desk"),
+    _rdne("office-computer-work.mp4", 7581303, "man-busy-with-paperworks",
+          "working at a computer, pen in hand"),
+    _rdne("office-phone-call.mp4", 7581273, "man-talking-on-the-telephone",
+          "a call on the desk phone"),
 ]
 
 # A file downloaded by hand goes here, under its original name; the script

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Film, Upload, Video, VideoOff } from "lucide-react";
-import { api, BROWSER_CAMERA, Camera, Clip, isLive } from "../services/api";
+import { api, BROWSER_CAMERA, Camera, Clip, isLive, isServerCamera } from "../services/api";
 import { clipTitle, groupClips } from "../services/clips";
 
 export default function SourceSelector() {
@@ -38,7 +38,7 @@ export default function SourceSelector() {
     }
   };
 
-  const serverLive = !!current && current.startsWith("camera:");
+  const serverLive = isServerCamera(current);
   const toggleLive = () => {
     if (serverLive) change(lastClip.current ?? clips[0]?.filename ?? "");
     else if (cameras[0]) change(cameras[0].filename);
@@ -74,8 +74,8 @@ export default function SourceSelector() {
           {(cameras.length > 0 || current === BROWSER_CAMERA) && (
             <optgroup label="Live cameras">
               {cameras.map((c) => (
-                <option key={c.filename} value={c.filename}>
-                  ● {c.name}
+                <option key={c.filename} value={c.filename} title={c.description}>
+                  ● {c.name}{c.kind === "cctv" ? " (CCTV)" : ""}
                 </option>
               ))}
               {/* Started from "Go live" on the video panel; shown here so
@@ -88,7 +88,7 @@ export default function SourceSelector() {
           {/* Started from the command line (run_pipeline.py --source <file>):
               not in either list, and without this the browser showed the
               first option ("Camera 1") as if it were playing. */}
-          {current && !isLive(current) && !current.startsWith("camera:")
+          {current && !isLive(current)
             && !clips.some((c) => c.filename === current) && (
             <optgroup label="Now playing">
               <option value={current} disabled>{clipTitle(current.split(/[\\/]/).pop() ?? current)}</option>
