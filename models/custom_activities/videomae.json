@@ -1,0 +1,94 @@
+{
+  "trained_at": "2026-11-26T08:34:10+00:00",
+  "phrases": {
+    "sleeping at desk": "sleeping at their desk"
+  },
+  "clips": {
+    "sleeping at desk": 26,
+    "other": 99
+  },
+  "looks": 2858,
+  "data": "data/training",
+  "validation": {
+    "folds": 4,
+    "threshold": 0.8,
+    "weight_decay": 0.1,
+    "rule": {
+      "min_hits": 3,
+      "looks": 4,
+      "strong": 0.98
+    },
+    "clip_accuracy": 0.692,
+    "activities": {
+      "sleeping at desk": {
+        "clips": 26,
+        "recognised": 18,
+        "confused": 0
+      }
+    },
+    "other_clips": 99,
+    "false_alarm_clips": 0,
+    "by_threshold": {
+      "0.5": {
+        "recognised": 23,
+        "false_alarms": 5
+      },
+      "0.55": {
+        "recognised": 21,
+        "false_alarms": 3
+      },
+      "0.6": {
+        "recognised": 20,
+        "false_alarms": 3
+      },
+      "0.65": {
+        "recognised": 20,
+        "false_alarms": 3
+      },
+      "0.7": {
+        "recognised": 19,
+        "false_alarms": 2
+      },
+      "0.75": {
+        "recognised": 18,
+        "false_alarms": 2
+      },
+      "0.8": {
+        "recognised": 18,
+        "false_alarms": 0
+      },
+      "0.85": {
+        "recognised": 17,
+        "false_alarms": 0
+      },
+      "0.9": {
+        "recognised": 16,
+        "false_alarms": 0
+      },
+      "0.95": {
+        "recognised": 14,
+        "false_alarms": 0
+      },
+      "0.97": {
+        "recognised": 13,
+        "false_alarms": 0
+      },
+      "0.98": {
+        "recognised": 11,
+        "false_alarms": 0
+      },
+      "0.99": {
+        "recognised": 8,
+        "false_alarms": 0
+      }
+    }
+  },
+  "format": 1,
+  "backend": "videomae",
+  "classes": [
+    "sleeping at desk",
+    "other"
+  ],
+  "threshold": 0.8,
+  "feature_dim": 768
+}

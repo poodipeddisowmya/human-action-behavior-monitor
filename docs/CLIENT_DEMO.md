@@ -31,10 +31,10 @@ the system is and how it works, in plain words:
    tea/tablets model can fail to load.
 3. **Start it**, on recorded clips:
    ```bash
-   PROBE_CAMERAS=0 ./run_jetson.sh --source data/samples/new-taking-tablets-1.mp4
+   PROBE_CAMERAS=0 ./run.sh --source data/samples/new-taking-tablets-1.mp4
    ```
-   On the CCTV camera instead: `./run_jetson.sh --source Reception`; a USB
-   camera: `./run_jetson.sh --source 0`.
+   On the CCTV camera instead: `./run.sh --source Reception`; a USB
+   camera: `./run.sh --source 0`.
 4. **Open the dashboard from a laptop** on the same network:
    `http://<jetson-address>:8000` (`hostname -I` on the Jetson shows the
    address). Not through remote desktop: it re-encodes the screen and the
@@ -129,7 +129,8 @@ cable goes back in.
 ### Close (30 seconds)
 
 > "Next step: a few cameras on your site. We measure accuracy on your own
-> footage, and fine-tune on it, which is the largest improvement available."
+> footage, and train it on clips from your cameras, which is the largest
+> improvement available."
 
 ## Questions clients ask
 
@@ -137,7 +138,7 @@ cable goes back in.
 |---|---|
 | How accurate is it? | On a GPU, 21–22 of 29 test clips clearly recognised; wrong labels under 1% of the time. On your own cameras we measure it on site. |
 | Does video leave our building? | Not with the Jetson: everything runs on the device. |
-| Can it learn our activities? | Ones the base model knows: one line. Others: describe them in words (as with tea and tablets), or fine-tune on a few hundred of your clips. |
+| Can it learn our activities? | Yes: put 20-50 clips of the activity from your cameras in a folder and run one command; it trains in minutes on this Jetson and reports its accuracy on clips it has not seen ([TRAINING.md](TRAINING.md)). Activities the base model knows: one line; describable ones: one entry. |
 | What about privacy? | Only people who agree are enrolled; others stay Unknown and their faces are never stored; enrolled people can be deleted at once. Proof photos are deleted after 30 days by default. |
 | Can it use our existing CCTV cameras? | Yes: any IP camera with an RTSP address (Hikvision, Dahua / CP Plus, Uniview, Axis…), one line each in `.env`. No new cameras or recorder needed; it reads the camera's second stream alongside your NVR. |
 | Where is the data? | In a database on the device (`logs/monitor.db`), proof photos in `data/evidence/`. Nothing is sent anywhere unless you connect a system to the API. |

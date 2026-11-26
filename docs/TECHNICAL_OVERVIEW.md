@@ -29,8 +29,9 @@ The monitor takes video from ordinary cameras (or recorded files), finds
 every person in it, follows each one with a stable ID, recognises what they
 are doing, names the people it has been taught to recognise, and keeps a log
 of every activity with 2–3 photos as proof. Everything is shown live on a web
-dashboard. It runs on a laptop, on a cloud GPU, or on a small NVIDIA Jetson
-computer on site, where no video ever leaves the building.
+dashboard. It runs on any 64-bit Linux edge board (an NVIDIA Jetson, a
+Raspberry Pi 5, a Rockchip board, a mini PC), on a laptop or server, or on a
+cloud GPU; on site, no video ever leaves the building.
 
 ## 2. What it does
 
@@ -65,6 +66,12 @@ brushing teeth · smoking
 **10 body postures and movements** (from the skeleton, always available):
 standing · sitting · walking · running · lying · kneeling · bending ·
 crawling · push-up · falling
+
+**Any activity you train** on clips from your own cameras: sort example
+clips into a folder per activity and run one command; it trains in minutes
+on the machine that runs the monitor and reports its accuracy on clips it has not seen
+([TRAINING.md](TRAINING.md)). The repository's example teaches *sleeping at
+desk*.
 
 ## 4. How it works
 
@@ -142,29 +149,31 @@ machines side by side, frame-synced, with the measured figures.
 
 ## 6. Hardware and measured results
 
-The same software runs on three kinds of hardware; it detects which one it is
-on and sets itself up accordingly.
+The same software runs on any of these; `./setup.sh` detects which one it is
+on and sets itself up accordingly ([DEPLOYMENT.md](DEPLOYMENT.md)).
 
-| | Laptop CPU | Cloud GPU (NVIDIA Tesla T4) | NVIDIA Jetson Orin Nano Super |
+| | Edge board without a GPU (Raspberry Pi 5, RK3588, mini PC) or laptop | Cloud GPU (NVIDIA Tesla T4) | NVIDIA Jetson Orin Nano Super |
 |---|---|---|---|
-| What it is | Any modern laptop | A data-centre GPU (e.g. Kaggle, AWS) | A palm-sized edge computer, 8 GB, 25 W |
-| Where video goes | Stays on the laptop | Sent to the cloud | Stays on site |
-| Good for | Trying it out | Central processing of many cameras | Permanent on-site installation |
+| What it is | Any 64-bit computer; the models are compiled for its CPU | A data-centre GPU (e.g. Kaggle, AWS) | A palm-sized edge computer, 8 GB, 25 W |
+| Where video goes | Stays on site | Sent to the cloud | Stays on site |
+| Good for | Low-cost sites, trying it out | Central processing of many cameras | Permanent on-site installation, every feature |
 
 Measured on the same 29 labelled clips, 12 s each, as the screen showed them:
 
-| | Laptop CPU | Tesla T4 | Jetson |
-|---|---:|---:|---:|
-| Activities clearly recognised | 1 / 29 | 21 / 29 | **22 / 29** |
-| Correct label on screen (average) | 4% | 66% | **68%** |
-| Wrong activity on screen | — | 0.5% | 0.8% |
-| Playback speed | 18 fps | 24 fps | 22 fps |
-| New activities clearly recognised (6 clips) | not run | 3 / 6 | **4 / 6** |
+| | Laptop CPU (earlier version) | ARM board CPU, compiled | Tesla T4 | Jetson |
+|---|---:|---:|---:|---:|
+| Activities clearly recognised | 1 / 29 | 15 / 29 | 21 / 29 | **22 / 29** |
+| Correct label on screen (average) | 4% | 47% | 66% | **68%** |
+| Wrong activity on screen | — | — | 0.5% | 0.8% |
+| Playback speed | 18 fps | 22 fps | 24 fps | 22 fps |
+| New activities clearly recognised (6 clips) | not run | GPU only | 3 / 6 | **4 / 6** |
 
 **What this means:**
-- A GPU is needed for accuracy, not just speed. On a CPU the activity model
-  gets one look every 1.5 s; on a GPU several a second, so the evidence
-  agrees much sooner.
+- A GPU gives the best accuracy, not just speed: the activity model gets
+  several looks a second, so the evidence agrees much sooner. Without one,
+  the models compiled for the CPU (OpenVINO, ONNX Runtime; chosen by
+  measuring on the machine) make a board usable: 15 / 29 on an ARM CPU,
+  against 1 / 29 on a laptop before compilation existed.
 - The Jetson matches the cloud GPU while staying on site, which is the
   recommended production set-up for privacy and running cost.
 - When the system is unsure it says less rather than something wrong:
@@ -178,11 +187,12 @@ Measured on the same 29 labelled clips, 12 s each, as the screen showed them:
 | Stop recognising a person | *Known people → delete*: removes every photo and record of their face. |
 | Add an activity described in words | One entry in `config/model_config.yaml` under `open_vocab.activities`: a name and a few descriptions ([NEW_ACTIVITIES.md](NEW_ACTIVITIES.md)). |
 | Add an activity the base model knows | One line in `src/action_recognition/target_vocabulary.py`. |
+| Add any other activity | Clips in `data/training/<activity>/`, then `scripts/train_activities.py` ([TRAINING.md](TRAINING.md)). |
 | Use a camera | A CCTV / IP camera: one line in `.env` (`CAMERA_RECEPTION=rtsp://…`), then pick it in *Source* or start with `--source Reception` ([CCTV.md](CCTV.md)). A USB camera: *Live camera*, or `--source 0`. The viewer's own webcam: *Go live*. |
 | Analyse a recording | Dashboard *Upload*, or `scripts/process_video.py` for an annotated video and a report. |
 | Protect access | Set `ACCESS_TOKEN` in `.env`. |
 | Keep proof photos longer or shorter | `EVIDENCE_RETENTION_DAYS` in `.env` (default 30). |
-| Turn features on or off | `.env`: `FACE_ID`, `OPEN_VOCAB`, `EVIDENCE`, `DEVICE`. |
+| Turn features on or off | `.env`: `FACE_ID`, `OPEN_VOCAB`, `CUSTOM_ACTIVITIES`, `EVIDENCE`, `DEVICE`. |
 
 Every threshold in `config/model_config.yaml` carries a comment saying what
 it was measured against, so changes are informed rather than guesses.
@@ -255,12 +265,19 @@ What to expect, stated plainly:
   sometimes read as eating, a pen held to the mouth as smoking.
 - **Not recognised as such:** talking, meetings and presentations; they show
   as the posture (sitting, standing).
+- **Fall alerts at desks:** of 87 clips of people at desks (including 42
+  laying their head down asleep), one raised a fall alert: a seated boy
+  putting his head on a library desk. The fall rule was left as it is: the
+  measured difference was too small to change it without risking missed
+  real falls (9 of 9 caught).
 - **Test footage:** these are public clips. Accuracy on the client's own
   cameras should be measured on site.
 
-**The biggest improvement available** is fine-tuning the activity model on a
-few hundred labelled clips from the client's own site and cameras. The
-project is built for it (the evaluation scripts measure before and after).
+**The biggest improvement available** is training on clips from the
+client's own cameras: `scripts/train_activities.py` learns new activities,
+or sharper versions of existing ones, from folders of example clips in
+minutes on the machine that runs the monitor, and reports accuracy on clips it was not trained on
+([TRAINING.md](TRAINING.md)).
 
 ## 11. Installing and running
 
@@ -268,11 +285,10 @@ Short version (full steps in the [README](../README.md)):
 
 | Machine | Install | Start |
 |---|---|---|
+| Any Linux machine or edge board (Jetson, Raspberry Pi 5, RK3588, mini PC, server) | `./setup.sh` ([DEPLOYMENT.md](DEPLOYMENT.md)) | `./run.sh` |
 | Windows laptop | `setup.bat` | `run.bat` |
-| Linux / macOS | `pip install -r requirements.txt` in a virtual environment | `python scripts/run_pipeline.py` |
-| NVIDIA Jetson | `./setup_jetson.sh` ([JETSON.md](JETSON.md)) | `./run_jetson.sh` |
 | Cloud GPU (Kaggle) | [KAGGLE_DEMO.md](KAGGLE_DEMO.md) | one notebook cell |
-| Server (Docker, GPU) | [DEPLOYMENT.md](DEPLOYMENT.md) | `docker compose up -d --build` |
+| Server (Docker, GPU or CPU) | [DEPLOYMENT.md](DEPLOYMENT.md) | `docker compose up -d --build` |
 
 Before anything else: **install Git LFS and clone with git** (not "Download
 ZIP"); the model files and videos are stored with Git LFS.
@@ -292,7 +308,8 @@ before a commercial product:
   Ultralytics Enterprise licence, or a different detector.
 - **The VideoMAE activity-model weights used on GPUs are non-commercial
   (CC BY-NC 4.0).** For commercial use: the S3D model (BSD licence, already
-  supported, used on CPUs), or a model fine-tuned on the client's own footage.
+  supported, used on CPUs); activities you train can be trained on S3D too
+  ([TRAINING.md](TRAINING.md#4-which-activity-model)).
 
 Everything else (ByteTrack, CLIP, X-CLIP, SmolVLM2, the face models) allows
 commercial use.
@@ -336,8 +353,10 @@ four cards. The step-by-step script, with what to click and what to say:
 | [MODEL_SELECTION.md](MODEL_SELECTION.md) | Every model, why, and its licence |
 | [NEW_ACTIVITIES.md](NEW_ACTIVITIES.md) | Making tea, taking tablets, falls; adding more |
 | [FACE_RECOGNITION.md](FACE_RECOGNITION.md) | Face recognition, enrolment, privacy |
-| [JETSON.md](JETSON.md) | The Jetson: set-up, tuning, the comparison |
+| [TRAINING.md](TRAINING.md) | Teaching it new activities from your own clips |
+| [CCTV.md](CCTV.md) | Connecting CCTV / IP cameras |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Deploying on any board, PC or server: which machines, install, service, Docker, what to expect |
+| [JETSON.md](JETSON.md) | The Jetson: which boards, set-up, tuning |
 | [KAGGLE_DEMO.md](KAGGLE_DEMO.md), [GPU_DEMO.md](GPU_DEMO.md) | Running on a cloud or local GPU |
-| [DEPLOYMENT.md](DEPLOYMENT.md) | Production server (Docker) |
 | [API.md](API.md) | Connecting other systems |
 | [scripts/README.md](../scripts/README.md) | Every script |

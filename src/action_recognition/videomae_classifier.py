@@ -34,6 +34,7 @@ import cv2
 import numpy as np
 
 from config import settings
+from config.settings import is_jetson
 
 from .object_context import ObjectContextDetector
 from .target_vocabulary import resolve_indices
@@ -411,8 +412,6 @@ _DETECTING = ActionPrediction(label="detecting…", confidence=0.0)
 
 
 # Kinetics-400 normalization constants (used by the torchvision video models).
-_KIN_MEAN = (0.43216, 0.394666, 0.37645)
-_KIN_STD = (0.22803, 0.22145, 0.216989)
 
 
 def _lower_body_hidden_in_frame(keypoints, bbox_xyxy, frame_hw) -> bool:
@@ -457,6 +456,21 @@ def _torso_upright(keypoints, bbox_xyxy) -> bool:
     return drop / body_h >= _UPRIGHT_TORSO and drop >= _UPRIGHT_SLOPE * run
 
 
+def _reclaim_jetson_memory(gb: float = 2.0) -> None:
+    """Evict the page cache on a Jetson (shared CPU/GPU memory) so CUDA can
+    allocate: touching a large buffer forces the kernel to drop cached file
+    pages, without needing root for drop_caches. Also frees PyTorch's cache."""
+    try:
+        import gc
+        gc.collect()                 # what a failed load left behind
+        np.ones(int(gb * 2**30) // 8).sum()
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:
+        pass
+
+
 class VideoMAEClassifier:
     """Restricted-vocabulary deep action classifier + fast pose fallback.
 
@@ -471,8 +485,6 @@ class VideoMAEClassifier:
     being 7x faster also makes it measurably *more accurate* in practice —
     it gets 7x more votes in the same wall-clock window.
     """
-
-    _VMAE_CHECKPOINT = "MCG-NJU/videomae-base-finetuned-kinetics"
 
     def __init__(self, backend: str | None = None):
         from src.action_recognition.action_classifier import SkeletonHeuristicClassifier
@@ -489,24 +501,40 @@ class VideoMAEClassifier:
         self._clip_len = _CLIP_LEN
         self._stride = _STRIDE_FRAMES
         self._model = None
+        self._custom = None
         self._backend = (backend or getattr(settings.model, "deep_backend", "s3d")).lower()
 
         try:
             import torch
+            from .clip_encoder import ClipEncoder
             self._torch = torch
-            model = None
+            encoder = None
             if self._backend == "videomae":
-                try:
-                    model, id2label = self._load_videomae()
-                except Exception as e:
-                    # Weights not downloaded on an offline box, say. S3D is
-                    # bundled, so degrade to it rather than to pose-only.
-                    print(f"[deep] VideoMAE unavailable ({e}); falling back to s3d",
-                          flush=True)
-                    self._backend = "s3d"
-            if model is None:
-                self._backend = "s3d"
-                model, id2label = self._load_s3d()
+                for attempt in (1, 2):
+                    try:
+                        encoder = ClipEncoder("videomae")
+                        break
+                    except Exception as e:
+                        if attempt == 1 and is_jetson():
+                            # The Jetson's GPU shares memory with the page
+                            # cache, which CUDA cannot evict: after heavy disk
+                            # reading (training, copying video) the load fails
+                            # with "NVML_SUCCESS == r INTERNAL ASSERT FAILED"
+                            # (seen 2026-11-26). Touching a large buffer makes
+                            # the kernel evict it; then one retry.
+                            print(f"[deep] VideoMAE load failed ({str(e)[:80]}); "
+                                  f"freeing memory and retrying", flush=True)
+                            _reclaim_jetson_memory()
+                            continue
+                        # Weights not downloaded on an offline box, say. S3D
+                        # is bundled, so degrade to it rather than to pose-only.
+                        print(f"[deep] VideoMAE unavailable ({e}); falling back to s3d",
+                              flush=True)
+            if encoder is None:
+                encoder = ClipEncoder("s3d")
+            self._encoder = encoder
+            self._backend = encoder.backend
+            model, id2label = encoder.model, encoder.id2label
             self._model = model
             self._id2label = id2label
 
@@ -518,8 +546,12 @@ class VideoMAEClassifier:
             self._idx_to_cat = idx_to_cat
             self._allowed_t = torch.tensor(allowed, dtype=torch.long, device=settings.device)
 
+            # Activities trained on site footage, for this backbone.
+            from .custom_activities import CustomActivities
+            self._custom = CustomActivities.load_for(self._backend)
+
             categories = sorted(set(idx_to_cat.values()))
-            print(f"[deep] backend={self._backend} on {settings.device}", flush=True)
+            print(f"[deep] backend={self._backend} on {settings.device} ({encoder.runtime})", flush=True)
             print(f"[deep] restricted vocabulary: {len(allowed)} Kinetics classes "
                   f"-> {len(categories)} categories: {', '.join(categories)}", flush=True)
         except Exception as e:
@@ -603,52 +635,6 @@ class VideoMAEClassifier:
         self._obj_cycle = 0
         self._worker = threading.Thread(target=self._worker_loop, daemon=True)
         self._worker.start()
-
-    # ------------------------------------------------------------------
-    # Backend loaders
-    # ------------------------------------------------------------------
-    def _load_s3d(self):
-        """torchvision S3D, Kinetics-400. ~310 ms/clip on CPU."""
-        from torchvision.models.video import S3D_Weights, s3d
-        weights = S3D_Weights.KINETICS400_V1
-        model = s3d(weights=weights).eval().to(settings.device)
-        categories = weights.meta["categories"]
-        id2label = {i: name for i, name in enumerate(categories)}
-        # Pre-build normalization tensors once.
-        t = self._torch
-        self._mean = t.tensor(_KIN_MEAN, device=settings.device).view(1, 3, 1, 1, 1)
-        self._std = t.tensor(_KIN_STD, device=settings.device).view(1, 3, 1, 1, 1)
-        return model, id2label
-
-    def _load_videomae(self):
-        """HuggingFace VideoMAE-base. Much more accurate per-clip, but ~7x slower."""
-        try:
-            from transformers import (
-                VideoMAEForVideoClassification,
-                VideoMAEImageProcessor,
-            )
-        except ImportError as e:
-            # transformers is an optional extra: it is large, and the default
-            # s3d backend does not need it. Say so plainly rather than letting
-            # a bare ImportError surface from three frames down.
-            raise ImportError(
-                "deep_backend is set to 'videomae', which needs the optional "
-                "extras:\n\n    pip install -r requirements-optional.txt\n\n"
-                "Or set `deep_backend: s3d` in config/model_config.yaml — it is "
-                "the default, needs nothing extra, and is ~7x faster on CPU."
-            ) from e
-        self._processor = VideoMAEImageProcessor.from_pretrained(self._VMAE_CHECKPOINT)
-        model = VideoMAEForVideoClassification.from_pretrained(self._VMAE_CHECKPOINT)
-        model.eval().to(settings.device)
-        if getattr(settings.model, "deep_half", False) and str(settings.device).startswith("cuda"):
-            # Jetson profile: 2.7x faster per look on an Orin Nano (202 -> 75
-            # ms). Softmax still runs in FP32 (see _infer), so the calibrated
-            # coverage / confidence thresholds see the same numbers.
-            model.half()
-        t = self._torch
-        self._vmae_mean = t.tensor(self._processor.image_mean, device=settings.device).view(1, 1, 3, 1, 1)
-        self._vmae_std = t.tensor(self._processor.image_std, device=settings.device).view(1, 1, 3, 1, 1)
-        return model, model.config.id2label
 
     # ------------------------------------------------------------------
     # Public interface
@@ -793,6 +779,8 @@ class VideoMAEClassifier:
                               self._sitting_since, self._seen_at):
                         d.pop(stale, None)
                     self._infer_attempted.discard(stale)
+                    if self._custom is not None:
+                        self._custom.forget(stale)
                     self._fallback.reset(stale)
                     self._posture.forget(stale)
             track_age = self._track_updates[track_id]
@@ -903,6 +891,18 @@ class VideoMAEClassifier:
             )
         return heur
 
+    def custom_current(self, person_id: int, single_person: bool) -> ActionPrediction | None:
+        """A trained activity confirmed for this person, if any."""
+        custom = getattr(self, "_custom", None)
+        if custom is None:
+            return None
+        return custom.current(_SCENE_KEY if single_person else person_id)
+
+    @property
+    def custom_activities(self) -> list[str]:
+        custom = getattr(self, "_custom", None)
+        return custom.activities if custom is not None else []
+
     def reset(self, person_id: int) -> None:
         if self._model is not None:
             with self._lock:
@@ -912,6 +912,8 @@ class VideoMAEClassifier:
                           self._track_updates, self._sitting_since):
                     d.pop(person_id, None)
                 self._infer_attempted.discard(person_id)
+            if self._custom is not None:
+                self._custom.forget(person_id)
         self._fallback.reset(person_id)
 
     def reset_all(self) -> None:
@@ -944,6 +946,8 @@ class VideoMAEClassifier:
                 self._scene_votes.clear()
                 self._scene_pred = None
                 self._scene_pred_at = 0.0
+                if self._custom is not None:
+                    self._custom.reset()
                 while True:
                     try:
                         self._jobs.get_nowait()
@@ -975,6 +979,7 @@ class VideoMAEClassifier:
 
     def _worker_loop(self) -> None:
         last_infer_end = 0.0
+        look_s = 0.0            # how long a look takes here, smoothed
         while True:
             gen, person_id, clip, crop_bgr, bbox_xyxy, keypoints, solo = self._jobs.get()
             # Cheap pre-check: skip work we already know is stale.
@@ -983,16 +988,26 @@ class VideoMAEClassifier:
 
             # Pace the worker so inference can't monopolise the CPU and starve
             # the video pipeline (see _MIN_INFER_INTERVAL).
+            # On a slow CPU the floor grows with the look itself (at most a
+            # third of the time spent looking), so a board slower than any
+            # measured still keeps its video moving. 2 x 0.58 s on an ARM
+            # board's 4 cores: the configured 1.5 s still applies there.
+            interval = _MIN_INFER_INTERVAL
+            if settings.device == "cpu":
+                interval = max(interval, 2.0 * look_s)
             gap = time.time() - last_infer_end
-            if gap < _MIN_INFER_INTERVAL:
-                time.sleep(_MIN_INFER_INTERVAL - gap)
+            if gap < interval:
+                time.sleep(interval - gap)
                 if gen != self._generation:
                     continue
 
             try:
+                started = time.time()
                 category, confidence = self._infer(
                     clip, person_id, upright=_torso_upright(keypoints, bbox_xyxy), solo=solo)
                 last_infer_end = time.time()
+                took = last_infer_end - started
+                look_s = took if look_s == 0 else 0.8 * look_s + 0.2 * took
             except Exception as e:
                 print(f"[deep] inference error: {e}", flush=True)
                 continue
@@ -1048,6 +1063,11 @@ class VideoMAEClassifier:
             with self._lock:
                 if gen != self._generation:      # source may have switched mid-inference
                     continue
+                # Trained activities see every look, rejected ones included:
+                # an activity Kinetics has no class for (asleep at a desk) is
+                # exactly a look with low coverage.
+                if self._custom is not None:
+                    self._custom.observe(person_id, self._last_feat)
                 if category is not None and confidence >= _CONF_VOTE:
                     self._process_vote(person_id, category, confidence)
                 if obj_result is not None:
@@ -1211,32 +1231,12 @@ class VideoMAEClassifier:
     def _infer(self, clip_bgr: list[np.ndarray], person_id: int = -1,
                upright: bool = False, solo: bool = False):
         torch = self._torch
-        rgb = np.stack([cv2.cvtColor(f, cv2.COLOR_BGR2RGB) for f in clip_bgr], axis=0)
+        logits, feat = self._encoder.forward(clip_bgr)
+        # For the trained activities: handed over by the worker once it has
+        # checked the look still belongs to the current source.
+        self._last_feat = feat
 
         with torch.no_grad():
-            if self._backend == "s3d":
-                # (T,H,W,C) uint8 -> (1,C,T,H,W) normalized float. Contiguous,
-                # so the real call matches the warm-up's memory layout: with
-                # cuDNN autotuning a permuted (strided) input is a "new" shape
-                # and its first call paid ~4 s of tuning on a T4.
-                x = torch.from_numpy(rgb).to(settings.device).float().div_(255.0)
-                x = x.permute(3, 0, 1, 2).unsqueeze(0).contiguous()
-                x = (x - self._mean) / self._std
-                logits = self._model(x)[0]
-            elif rgb.shape[1:3] == _INPUT_HW:
-                # Frames are already 224x224, where the HF processor's resize
-                # and crop are identities: rescale + normalise on the GPU
-                # instead. Verified bit-identical (max abs diff 0.0) to the
-                # processor, which on the CPU cut playback to 16 fps on a T4.
-                x = torch.from_numpy(rgb).to(settings.device).float().div_(255.0)
-                x = x.permute(0, 3, 1, 2).unsqueeze(0).contiguous()     # (1,T,C,H,W)
-                x = (x - self._vmae_mean) / self._vmae_std
-                logits = self._model(pixel_values=x.to(self._model.dtype)).logits[0]
-            else:
-                inputs = self._processor(list(rgb), return_tensors="pt")
-                inputs = {k: v.to(settings.device, self._model.dtype) for k, v in inputs.items()}
-                logits = self._model(**inputs).logits[0]
-
             full_probs = torch.softmax(logits.float(), dim=-1)
 
             # How much belief lands inside our target vocabulary at all?

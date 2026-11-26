@@ -143,6 +143,9 @@ looks steep; the height collapse shows it).
 Not caught: a fall that ends sitting against something (the box stays
 tall), or one hidden behind furniture. A quick, deliberate lie-down on a
 sofa looks like a fall; for a safety alert that is the side to err on.
+Checked on 87 clips of people at desks (2026-11-26): one false alert, a
+seated boy laying his head on a desk (his seated height dropped below 60%,
+the rule's "collapsed" test meant for falls towards the camera).
 
 ## Proof images in the events log
 

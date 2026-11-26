@@ -88,12 +88,36 @@ class PersonTracker:
         chosen = weights or settings.model.detector_weights
         path = fetch_weights(chosen, getattr(settings.model, "detector_fallback_weights", None))
         chosen = Path(path).name
+        original, compiled = path, None
         if getattr(settings.model, "detector_engine", False):
             path = self._engine_for(path)
             chosen = Path(path).name
+        elif not str(device or settings.device).startswith("cuda"):
+            # On a CPU: the detector compiled for this machine, if
+            # scripts/optimise_for_device.py made one (src/utils/compiled_models.py).
+            from src.utils.compiled_models import detector_for
+            compiled = detector_for(chosen, getattr(settings.model, "detector_imgsz", 640))
+            if compiled:
+                print(f"[detector] compiled for this CPU: {Path(compiled).name}", flush=True)
+                path = compiled
+                chosen = Path(path).name
         self.weights_name = chosen
-        self._model = YOLO(path, task="pose" if "pose" in chosen else None)
         self._device = device or settings.device
+        if not compiled:
+            self._model = YOLO(path, task="pose" if "pose" in chosen else None)
+        else:
+            # A compiled model is checked once here: if it cannot run (a
+            # runtime upgraded or removed since it was made), the PyTorch
+            # model runs instead, rather than every frame failing.
+            try:
+                self._model = YOLO(path, task="pose" if "pose" in chosen else None)
+                self._model.predict(np.zeros((64, 64, 3), np.uint8), device="cpu", verbose=False,
+                                    imgsz=getattr(settings.model, "detector_imgsz", 640))
+            except Exception as e:
+                print(f"[detector] compiled model unusable ({str(e)[:100]}); using "
+                      f"{Path(original).name}", flush=True)
+                chosen = self.weights_name = Path(original).name
+                self._model = YOLO(original, task="pose" if "pose" in chosen else None)
         self._half = str(self._device).startswith("cuda") and getattr(
             settings.model, "detector_half", False)
         self._tracker_cfg = settings.model.tracker
@@ -183,6 +207,17 @@ class PersonTracker:
         elif not self._use_hd and self._tallest < self._HD_ON_MAX_H:
             self._use_hd = True
         return hd if self._use_hd else base
+
+    def detect(self, image: np.ndarray) -> list[tuple[float, float, float, float]]:
+        """People in one frame, without tracking state (training, tools)."""
+        kwargs = dict(conf=self._conf, device=self._device, verbose=False,
+                      imgsz=getattr(settings.model, "detector_imgsz", 640), half=self._half)
+        if not self._pose_capable:
+            kwargs["classes"] = [PERSON_CLASS_ID]
+        result = self._model.predict(image, **kwargs)[0]
+        if result.boxes is None:
+            return []
+        return [tuple(float(v) for v in b) for b in result.boxes.xyxy.tolist()]
 
     def update(self, image: np.ndarray) -> list[Track]:
         kwargs = dict(

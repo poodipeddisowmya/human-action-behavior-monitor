@@ -23,8 +23,9 @@ client data. All licences allow commercial use except where noted.
   itself open source needs an Ultralytics Enterprise licence, or a switch
   to a permissively licensed detector.
 - **The VideoMAE Kinetics weights are CC BY-NC 4.0** (non-commercial). On a
-  commercial deployment use the S3D backend (`deep_backend: s3d`, BSD), or
-  fine-tune a permissive backbone on the client's own footage.
+  commercial deployment use the S3D backend (`deep_backend: s3d`, BSD), and
+  train your own activities on it (`scripts/train_activities.py --backend
+  s3d`, [TRAINING.md](TRAINING.md)).
 - Everything else above allows commercial use.
 
 ## Measured

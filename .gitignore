@@ -62,3 +62,12 @@ data/samples/new-*
 # Indian office set (Pexels): fetched by scripts/fetch_new_activity_clips.py.
 data/samples/office-*
 !data/samples/office-people.mp4
+
+# Training clips for new activities (scripts/train_activities.py): site footage, never committed.
+data/training/
+data/training-holdout/
+# Previous trained-activity models, kept by each training run (undo).
+models/custom_activities/backup/
+
+# Models compiled for one machine by scripts/optimise_for_device.py.
+models/compiled/

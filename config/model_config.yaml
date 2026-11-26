@@ -163,6 +163,22 @@ open_vocab:
       - taking a pill
       - a person taking a tablet and swallowing medicine with water
 
+# Activities trained on your own clips (src/action_recognition/
+# custom_activities.py): a small layer on the activity model's features,
+# trained by scripts/train_activities.py into models/custom_activities/
+# (docs/TRAINING.md). Shown like the text-defined activities above.
+custom_activities:
+  enabled: true
+  threshold: null          # null = the one chosen at training (in the .json)
+  # Shown once min_hits of the last `looks` looks at a person reach the
+  # threshold: 3 of 4 is about 2 s of evidence. On the example (asleep at a
+  # desk), 2 of 3 let head-down writing and a slumped smoker through.
+  # Training measures accuracy under this same rule: retrain after changing.
+  min_hits: 3
+  looks: 4
+  strong: 0.98             # one look alone confirms only beyond this (and the threshold)
+  hold_s: 4.0              # shown this long after the last supporting look
+
 # Face recognition: names tracked people who were enrolled (with consent) in
 # the dashboard's Known people panel; everyone else stays "Unknown". OpenCV
 # Zoo's YuNet (MIT) + SFace (Apache-2.0), on the CPU, in its own thread.

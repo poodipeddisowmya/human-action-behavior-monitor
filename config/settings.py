@@ -30,6 +30,14 @@ load_dotenv(ROOT / ".env")
 # keeps their choice.
 os.environ.setdefault("TORCH_HOME", str(ROOT / "models" / "torch"))
 
+# ultralytics pip-installs packages it thinks are missing or the wrong
+# version, at run time, into whichever Python `pip` on the PATH belongs to
+# (seen 2026-11-26: exporting for OpenVINO on an ARM board, it ran pip to
+# fetch an older OpenVINO into the user's site-packages). A deployed box must
+# never change
+# its own software: everything comes from setup.sh / requirements*.txt.
+os.environ.setdefault("YOLO_AUTOINSTALL", "false")
+
 # The monitor never draws charts, but ultralytics imports matplotlib, which
 # fails outright if MPLBACKEND names a backend this environment lacks.
 # Jupyter sets exactly that (module://matplotlib_inline...) for every program
@@ -207,6 +215,10 @@ class Settings(BaseModel):
     # Face recognition of enrolled people (face_id: in model_config.yaml;
     # src/identity/face_id.py). FACE_ID=0 turns it off.
     face_id: dict = Field(default_factory=dict)
+    # Activities trained on your own clips (custom_activities: in
+    # model_config.yaml; scripts/train_activities.py, docs/TRAINING.md).
+    # CUSTOM_ACTIVITIES=0 turns them off.
+    custom_activities: dict = Field(default_factory=dict)
 
 
 @lru_cache
@@ -214,7 +226,8 @@ def _load() -> Settings:
     with (ROOT / "config" / "model_config.yaml").open("r", encoding="utf-8") as f:
         raw = yaml.safe_load(f)
     s = Settings(model=ModelConfig(**raw["model"]), open_vocab=raw.get("open_vocab") or {},
-                 face_id=raw.get("face_id") or {})
+                 face_id=raw.get("face_id") or {},
+                 custom_activities=raw.get("custom_activities") or {})
     if s.device.startswith("cuda"):
         # On a GPU the speed/responsiveness trade-offs made for the CPU no
         # longer apply: look at the activity far more often (labels confirm
@@ -258,6 +271,8 @@ def _load() -> Settings:
         s.face_id["enabled"] = _env_bool("FACE_ID")
     if os.getenv("OPEN_VOCAB"):
         s.open_vocab["enabled"] = _env_bool("OPEN_VOCAB")
+    if os.getenv("CUSTOM_ACTIVITIES"):
+        s.custom_activities["enabled"] = _env_bool("CUSTOM_ACTIVITIES")
     if os.getenv("LABEL_MIN_DWELL_S"):
         s.model.label_min_dwell_s = float(os.environ["LABEL_MIN_DWELL_S"])
     return s

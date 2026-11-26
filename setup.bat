@@ -50,6 +50,12 @@ echo Installing dependencies ^(this takes a few minutes the first time^)...
 if errorlevel 1 ( echo. & echo ERROR: dependency install failed. & pause & exit /b 1 )
 
 echo.
+echo Compiling the models for this computer's CPU (a few minutes; optional)...
+.venv\Scripts\python.exe -m pip install -r requirements-edge.txt --quiet
+if not errorlevel 1 .venv\Scripts\python.exe scripts\optimise_for_device.py
+if errorlevel 1 echo   (skipped: the monitor uses the standard models)
+
+echo.
 echo Running install check...
 echo.
 .venv\Scripts\python.exe scripts\verify_install.py

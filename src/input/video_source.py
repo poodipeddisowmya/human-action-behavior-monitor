@@ -97,6 +97,17 @@ class DatasetSource(_OpenCVSource):
 
 
 CAMERA_PREFIX = "camera:"
+_CAMERA_RETRY_S = 10.0
+
+
+def _first_clip() -> Path | None:
+    """The clip shown while a USB camera is missing (as run_pipeline's default)."""
+    samples = Path(__file__).resolve().parents[2] / "data" / "samples"
+    preferred = samples / "demo-cooking.mp4"
+    if preferred.exists():
+        return preferred
+    clips = sorted(samples.glob("*.mp4")) + sorted(samples.glob("*.avi"))
+    return clips[0] if clips else None
 
 # Live-camera capture settings. 960x540 rather than 1280x720: measured on a
 # Logitech C270 indoors, 720p came in at ~10 fps (the camera lengthens its
@@ -262,10 +273,34 @@ class SwappableFileSource(VideoSource):
     def __init__(self, initial_path: str | Path):
         self._current = self._key(initial_path)
         self._pending: Path | None = None
-        self._cap = self._open(self._current)
-        self._fps = self._cap.get(cv2.CAP_PROP_FPS) or 30.0
+        # A USB camera that is unplugged: retried every _CAMERA_RETRY_S while a
+        # clip plays (CCTV cameras reconnect by themselves, in StreamCapture).
+        self._retry_camera: Path | None = None
+        self._retry_at = 0.0
         # Last file played, so a live source that goes silent can return to it.
         self._last_file: Path | None = None if is_live(self._current) else self._current
+        try:
+            self._cap = self._open(self._current)
+        except RuntimeError as e:
+            if not is_camera(self._current):
+                raise
+            # Started at boot by the service with its camera unplugged: a
+            # monitor that exits would only restart, exit again, and show
+            # nothing; this one shows a clip and picks the camera up when
+            # it is plugged in.
+            self._wait_for_camera(self._current, str(e))
+        self._fps = self._cap.get(cv2.CAP_PROP_FPS) or 30.0
+
+    def _wait_for_camera(self, camera: Path, why: str) -> None:
+        """Play a clip meanwhile; frames() retries the camera every few seconds."""
+        fallback = self._last_file or _first_clip()
+        if fallback is None:
+            raise RuntimeError(why)
+        print(f"[source] {why} (unplugged?): playing {fallback.name} meanwhile, "
+              f"trying the camera again every {_CAMERA_RETRY_S:.0f} s", flush=True)
+        self._retry_camera, self._retry_at = camera, time.monotonic() + _CAMERA_RETRY_S
+        self._current = fallback
+        self._cap = self._open(fallback)
 
     @staticmethod
     def _key(target) -> Path:
@@ -312,11 +347,24 @@ class SwappableFileSource(VideoSource):
     def switch_to(self, new_path: str | Path) -> None:
         """Schedule a switch. Applied at the top of the next frame iteration."""
         self._pending = self._key(new_path)
+        self._retry_camera = None                 # the operator's choice wins
 
     def frames(self) -> Iterator[Frame]:
         idx = 0
         t0 = time.monotonic()
         while True:
+            if (self._retry_camera is not None and self._pending is None
+                    and time.monotonic() >= self._retry_at):
+                cap = open_camera(int(str(self._retry_camera)[len(CAMERA_PREFIX):]))
+                if cap is None:
+                    self._retry_at = time.monotonic() + _CAMERA_RETRY_S
+                else:
+                    print(f"[source] {self._retry_camera} is back", flush=True)
+                    self._cap.release()
+                    self._cap, self._current = cap, self._retry_camera
+                    self._retry_camera = None
+                    self._fps = self._cap.get(cv2.CAP_PROP_FPS) or 30.0
+                    idx, t0 = 0, time.monotonic()
             if self._pending is not None:
                 previous = self._current
                 self._cap.release()
@@ -357,7 +405,12 @@ class SwappableFileSource(VideoSource):
                     time.sleep(0.05)
                     if self._pending is None:
                         self._cap.release()
-                        self._cap = self._open(self._current)
+                        try:
+                            self._cap = self._open(self._current)
+                        except RuntimeError as e:          # unplugged
+                            self._wait_for_camera(self._current, str(e))
+                            self._fps = self._cap.get(cv2.CAP_PROP_FPS) or 30.0
+                            idx, t0 = 0, time.monotonic()
                     continue
                 # loop the current file
                 self._cap.set(cv2.CAP_PROP_POS_FRAMES, 0)

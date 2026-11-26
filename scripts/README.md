@@ -12,19 +12,23 @@ full; `--help` lists its options.
 | `verify_install.py` | Checks a new installation and prints the fix for anything missing. Run it first. |
 | `run_pipeline.py` | Starts the monitor and dashboard (`--source <clip>`, `--source 0` for a camera). |
 | `fetch_new_activity_clips.py` | Downloads the demo clips not in the repository from their sources: making tea, taking tablets, falling down, and the Indian office set. |
+| `train_activities.py` | Trains new activities from folders of example clips, reports held-out accuracy, installs the model ([TRAINING.md](../docs/TRAINING.md)). |
+| `fetch_training_example.py` | Downloads the example training set (people asleep at desks, ordinary office activity). |
 | `record_live.py` | Records what the dashboard shows (boxes, names, subtitles) to MP4, from whatever is playing. |
 | `test_camera.py` | Plays a video file as a network camera, to rehearse the CCTV path without one ([CCTV.md](../docs/CCTV.md)). |
-| `download_models.py` | Downloads model weights again, if any are missing. |
+| `download_models.py` | Downloads the model weights this machine uses (setup runs it), so the monitor then runs offline; `--all` for every model. |
 | `process_video.py` | Processes a video file offline into an annotated video and an activity report. |
 | `live_window.py` | Watches a running monitor in a desktop window instead of a browser. |
 | `smoke_test.py` | Checks a deployed server: is it up, recognising, and real time? |
 | `gpu_check.py` | Is the GPU used, and how fast is each model on it? |
 | `install_autostart.ps1`, `keep_running.ps1`, `uninstall_autostart.ps1` | Windows: start the monitor at log-on and restart it if it stops. |
+| `install_service.sh` | Linux, any board: start the monitor at boot and restart it if it stops (systemd; `--uninstall` removes it). |
 
 ## GPU, Jetson and Kaggle
 
 | Script | What it does |
 |---|---|
+| `optimise_for_device.py` | Makes the monitor as fast as it can be on this machine (setup.sh runs it): on a CPU, compiles the detector and activity model with OpenVINO / ONNX Runtime, measures each and keeps the fastest; on a Jetson, builds the TensorRT engine. |
 | `build_trt_engines.py` | Builds the TensorRT detector engine (NVIDIA GPU or Jetson; once per device). |
 | `kaggle_launch.py` | Runs the monitor in a Kaggle GPU notebook with a public link. |
 | `kaggle_auto.py`, `package_for_kaggle.py` | Packages the project and runs the Kaggle GPU tests from this PC. |

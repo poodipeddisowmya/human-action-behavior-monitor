@@ -15,6 +15,7 @@ from src.storage import init_db
 from src.utils import get_logger
 
 from . import auth
+from .routes import activities as activities_route
 from .routes import database as database_route
 from .routes import events as events_route
 from .routes import evidence as evidence_route
@@ -132,6 +133,7 @@ app.add_middleware(
 app.include_router(persons_route.router, prefix="/api/persons", tags=["persons"])
 app.include_router(events_route.router, prefix="/api/events", tags=["events"])
 app.include_router(database_route.router, prefix="/api/database", tags=["database"])
+app.include_router(activities_route.router, prefix="/api/activities", tags=["activities"])
 app.include_router(evidence_route.router, prefix="/api/evidence", tags=["evidence"])
 app.include_router(known_people_route.router, prefix="/api/known-people", tags=["known people"])
 app.include_router(sources_route.router, prefix="/api/sources", tags=["sources"])

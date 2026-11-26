@@ -22,11 +22,14 @@ def _classifier_answering(raw: str) -> VideoMAEClassifier:
     c._id2label = dict(enumerate(CATS))
     c._allowed, c._idx_to_cat = resolve_indices(c._id2label)
     c._allowed_t = torch.tensor(c._allowed)
-    c._mean = torch.zeros(1, 3, 1, 1, 1)
-    c._std = torch.ones(1, 3, 1, 1, 1)
-    logits = torch.full((1, len(CATS)), -10.0)
-    logits[0, CATS.index(raw)] = 10.0
-    c._model = lambda x: logits
+    logits = torch.full((len(CATS),), -10.0)
+    logits[CATS.index(raw)] = 10.0
+
+    class _Encoder:                      # stands in for clip_encoder.ClipEncoder
+        def forward(self, clip):
+            return logits, np.zeros(1024, np.float32)
+
+    c._encoder = _Encoder()
     return c
 
 

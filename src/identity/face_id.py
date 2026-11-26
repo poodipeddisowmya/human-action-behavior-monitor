@@ -160,6 +160,11 @@ class FaceIdentifier:
         self._tracks: dict[int, _Track] = {}
         self._lock = threading.Lock()
         self._jobs: queue.Queue = queue.Queue(maxsize=4)
+        # Bumped by reset() (a source switch). A look queued or in progress
+        # under an older generation belonged to the previous video: its
+        # result is dropped, or it would name whoever now has that track
+        # number (seen: a woman named after the man in the previous clip).
+        self._generation = 0
         self.models: FaceModels | None = None
         if not self.enabled:
             if not FaceModels.available():
@@ -217,29 +222,31 @@ class FaceIdentifier:
             head = (head[0] - cx, head[1] - cy)
         box = (x1 - cx, y1 - cy, x2 - cx, y2 - cy)
         try:
-            self._jobs.put_nowait((person_id, crop.copy(), head, box))
+            self._jobs.put_nowait((self._generation, person_id, crop.copy(), head, box))
         except queue.Full:
             pass
 
     def _worker(self) -> None:
         while True:
-            pid, crop, head, box = self._jobs.get()
+            gen, pid, crop, head, box = self._jobs.get()
+            if gen != self._generation:
+                continue
             try:
                 f = pick_face(self.models.faces(crop), head, box)
                 if f is None or f[-1] < self.min_quality or f[2] < self.min_px:
                     continue                    # no clear face of theirs: not a vote either way
                 e, aligned = self.models.embed(crop, f)
                 who, sim = self.gallery.match(e, self.threshold, self.margin)
-                self._vote(pid, who, sim)
+                self._vote(pid, who, sim, gen)
                 if f[2] >= ENROL_MIN_PX:
-                    self._keep(pid, Face(float(f[-1]), int(f[2]), e, aligned, _shot(crop, f)))
+                    self._keep(pid, Face(float(f[-1]), int(f[2]), e, aligned, _shot(crop, f)), gen)
             except Exception as ex:
                 print(f"[face-id] look failed: {ex}", flush=True)
 
-    def _vote(self, pid: int, who: int | None, sim: float) -> None:
+    def _vote(self, pid: int, who: int | None, sim: float, gen: int | None = None) -> None:
         with self._lock:
             t = self._tracks.get(pid)
-            if t is None:
+            if t is None or (gen is not None and gen != self._generation):
                 return
             t.votes.append(who)
             if t.person is None:
@@ -255,10 +262,12 @@ class FaceIdentifier:
             elif who == t.person:
                 t.challenger, t.challenges, t.similarity = None, 0, max(t.similarity, sim)
 
-    def _keep(self, pid: int, face: Face) -> None:
+    def _keep(self, pid: int, face: Face, gen: int | None = None) -> None:
         """Hold the best few faces of an unnamed person; near-duplicates of a
         face already held only replace it when they are clearer."""
         with self._lock:
+            if gen is not None and gen != self._generation:
+                return
             t = self._tracks.get(pid)
             if t is None or t.person is not None:
                 if t is not None:
@@ -315,7 +324,13 @@ class FaceIdentifier:
 
     def reset(self) -> None:
         with self._lock:
+            self._generation += 1
             self._tracks.clear()
+        while True:                         # looks queued for the old video
+            try:
+                self._jobs.get_nowait()
+            except queue.Empty:
+                break
 
 
 # COCO keypoints of the head: nose, eyes, ears.
