@@ -89,6 +89,7 @@ view: the stages, the modules, the threads, and where to extend it.
 |---|---|
 | An activity Kinetics-400 knows | One line in `src/action_recognition/target_vocabulary.py` |
 | An activity described in words | One entry under `open_vocab.activities` in `config/model_config.yaml` ([NEW_ACTIVITIES.md](NEW_ACTIVITIES.md)) |
+| Any other activity | Clips in `data/training/<activity>/` and `scripts/train_activities.py`: a layer on the activity model's features, `src/action_recognition/custom_activities.py` ([TRAINING.md](TRAINING.md)) |
 | A person to recognise | The dashboard: Faces on screen, Known people, or a proof photo |
 | A place for the subtitles | One line in `_PLACES` in `src/description/scene.py` |
 | A CCTV / IP camera | One `CAMERA_<NAME>=rtsp://…` line in `.env` ([CCTV.md](CCTV.md)) |

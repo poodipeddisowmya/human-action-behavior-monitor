@@ -4,10 +4,25 @@ Tested on a **Jetson Orin Nano Super Developer Kit** (8 GB, JetPack 6.2.1,
 L4T R36.4.7, CUDA 12.6, TensorRT 10.3, Python 3.10, power mode `MAXN_SUPER`),
 2026-11-16.
 
+## Which Jetson
+
+| Board | Status |
+|---|---|
+| **Orin Nano Super / Orin Nano 8 GB** | Tested (all results on this page). One camera at ~22 fps. |
+| **Orin NX 8/16 GB, AGX Orin 32/64 GB** | Same JetPack 6 software, so the same setup and commands; not yet run here. More GPU and memory: room for subtitles from SmolVLM2 (`VLM_CAPTIONS=1`) and a second monitor for a second camera. |
+| Orin Nano 4 GB | Not enough memory for all the models (the 8 GB board uses about 6 GB). |
+| Jetson Nano, TX2, Xavier (JetPack 4 / 5) | Not supported: their Python and PyTorch versions are too old. |
+
+On any Orin: JetPack 6.x, `./setup.sh` (on a Jetson it runs `setup_jetson.sh`, which builds the TensorRT engine
+for that board, since an engine only runs on the board type that built it),
+then the steps below. Power: the official adapter, and the highest stable
+power mode (`sudo nvpmodel -q` shows it; the Orin Nano throttles at its
+maximum on a weak supply).
+
 ## Setup — once, no sudo needed
 
 ```bash
-./setup_jetson.sh
+./setup.sh          # on a Jetson: runs setup_jetson.sh
 ```
 
 It:
@@ -31,10 +46,29 @@ the CPU cores drop to 729 MHz between bursts.
 ## Run
 
 ```bash
-./run_jetson.sh                       # dashboard on http://<jetson-ip>:8000
-./run_jetson.sh --source 0            # USB camera
+./run.sh                              # dashboard on http://<jetson-ip>:8000
+./run.sh --source 0                   # USB camera
 .venv/bin/python scripts/live_window.py --fullscreen   # live view on the Jetson's screen
 ```
+
+### Running day to day
+
+```bash
+scripts/install_service.sh          # start at boot, restart within 10 s if it stops
+```
+
+It plays what `SOURCE=` in `.env` names (a CCTV camera, `0` for USB, or a
+file); `systemctl --user status action-monitor` and `journalctl --user -u
+action-monitor -f` show it. Once, so it starts before anyone logs in:
+`sudo loginctl enable-linger $USER`. Remove it with `--uninstall`.
+
+### Training a new activity on the Jetson
+
+Stop the monitor (`systemctl --user stop action-monitor`, or Ctrl+C), run
+`.venv/bin/python scripts/train_activities.py`, start it again
+([TRAINING.md](TRAINING.md)). On the Orin Nano the example (125 clips) takes
+about 8 minutes per activity model the first time, and seconds to retrain
+after that (each clip's features are cached).
 
 ### Live camera
 
@@ -156,7 +190,7 @@ run-to-run noise (three clips moved, in both directions).
 | Issue | What happened | Fix |
 |---|---|---|
 | cuDNN autotune | `NVML_SUCCESS == r INTERNAL ASSERT FAILED` on the first S3D/VideoMAE look | `config/settings.py` disables `cudnn.benchmark` on a Jetson |
-| Shared memory | CPU and GPU share 8 GB, and CUDA allocations do not evict the page cache: models fail to load (`NvMapMemAlloc error 12`) while `free` shows GBs "available" | `run_jetson.sh` / `record_showcase.py` touch a 2 GB buffer first, which evicts it (no sudo) |
+| Shared memory | CPU and GPU share 8 GB, and CUDA allocations do not evict the page cache: models fail to load (`NvMapMemAlloc error 12`) while `free` shows GBs "available" | `run.sh` / `record_showcase.py` touch a 2 GB buffer first, which evicts it (no sudo) |
 | Idle CUDA contexts | The batch parent of `process_video.py` held ~300 MB of GPU memory while only waiting | It imports the app only in the per-clip worker |
 
 Memory: with the desktop and a few desktop applications open, ~4 GB is left

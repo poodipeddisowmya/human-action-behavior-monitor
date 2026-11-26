@@ -9,6 +9,7 @@ it looked for and what it found.
 from __future__ import annotations
 
 import importlib
+import os
 import sys
 from pathlib import Path
 
@@ -33,6 +34,12 @@ def check(label: str, ok: bool, detail: str = "", fix: str = "", warn_only: bool
 
 def main() -> None:
     print("\nHuman Action & Behavior Monitor — install check\n" + "-" * 52)
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from src.utils.hardware import summary
+        print(f"  machine: {summary()}\n")
+    except Exception:
+        pass
 
     # --- Python version ---------------------------------------------------
     # Upper bound matters as much as the lower one: numpy 1.26.4 ships no
@@ -149,6 +156,37 @@ def main() -> None:
         check("model loads and runs a frame", False, str(e)[:100],
               "see the traceback above; usually a missing weight file or a bad install")
 
+    # --- Device and speed-ups ---------------------------------------------
+    gpu = str(settings.device).startswith("cuda")
+    check("runs on", True, "the NVIDIA GPU" if gpu else "the CPU (no NVIDIA GPU found)")
+    if not gpu:
+        from src.utils import compiled_models as cm
+        man = cm.manifest()
+        if man:
+            d, a = man.get("detector") or {}, (man.get("activity") or {}).get("s3d") or {}
+            check("compiled for this CPU", True,
+                  f"detector {d.get('runtime')} {d.get('ms', 0):.0f} ms, "
+                  f"activity model {a.get('runtime')} {a.get('ms', 0):.0f} ms")
+        else:
+            check("compiled for this CPU", False, "not yet: PyTorch models, several times slower",
+                  "python scripts/optimise_for_device.py", warn_only=True)
+
+    # --- Trained activities (docs/TRAINING.md): optional ----------------
+    try:
+        from src.action_recognition.custom_activities import ActivityHead, model_paths
+        backend = settings.model.deep_backend
+        npz, meta = model_paths(backend)
+        others = [b for b in ("s3d", "videomae") if b != backend and model_paths(b)[0].is_file()]
+        if npz.is_file():
+            head = ActivityHead.load(npz, meta)
+            check("trained activities", True, f"{', '.join(head.activities)} ({backend})")
+        elif others:
+            check("trained activities", False, f"trained for {others[0]}, but this machine uses {backend}",
+                  f"python scripts/train_activities.py --backend {backend}", warn_only=True)
+    except Exception as e:
+        check("trained activities", False, str(e)[:100],
+              "retrain: python scripts/train_activities.py", warn_only=True)
+
     # --- Verdict ----------------------------------------------------------
     print("-" * 52)
     if failures:
@@ -158,7 +196,8 @@ def main() -> None:
     if warnings:
         print(f"\n{len(warnings)} warning(s): " + ", ".join(warnings))
         print("These will still work if the machine has internet on first run.")
-    print("\nAll good. Start it with:\n\n    python scripts/run_pipeline.py\n")
+    start = "run.bat" if os.name == "nt" else "./run.sh"
+    print(f"\nAll good. Start it with:\n\n    {start}\n")
     print("Then open http://localhost:8000\n")
 
 

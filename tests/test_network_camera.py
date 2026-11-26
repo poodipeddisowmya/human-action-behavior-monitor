@@ -136,3 +136,40 @@ def test_monitor_shows_no_signal_card_not_a_frozen_picture(monkeypatch):
         assert src.camera_status["state"] in ("connecting", "no signal")
     finally:
         src.close()
+
+
+def test_unplugged_usb_camera_plays_a_clip_and_comes_back(monkeypatch):
+    """Started (e.g. by the service at boot) with its USB camera unplugged:
+    the monitor shows a clip instead of exiting, and switches to the camera
+    by itself once it is plugged in."""
+    from src.input import video_source as vs
+
+    class _Cam:
+        def __init__(self):
+            self.n = 0
+
+        def read(self):
+            self.n += 1
+            return True, np.full((90, 160, 3), 200, np.uint8)
+
+        def get(self, prop):
+            return 30.0
+
+        def release(self):
+            pass
+
+    plugged = {"yes": False}
+    monkeypatch.setattr(vs, "open_camera", lambda i: _Cam() if plugged["yes"] else None)
+    monkeypatch.setattr(vs, "_CAMERA_RETRY_S", 0.0)
+    src = vs.SwappableFileSource("camera:0")
+    try:
+        assert not vs.is_live(src.current)                 # a demo clip meanwhile
+        frames = src.frames()
+        next(frames)
+        assert not vs.is_live(src.current)                 # still unplugged
+        plugged["yes"] = True
+        next(frames)
+        assert str(src.current) == "camera:0"              # picked up by itself
+        assert next(frames).image.mean() == 200
+    finally:
+        src.close()

@@ -60,6 +60,16 @@ _PHRASES: dict[str, str] = {
     "crawling": "crawling",
 }
 
+
+
+def add_phrases(phrases: dict[str, str]) -> None:
+    """Teach the subtitle new labels: activities trained on site footage
+    (custom_activities.py) bring their own wording, e.g.
+    {"sleeping at desk": "asleep at their desk"}. Built-in labels keep theirs."""
+    for label, phrase in phrases.items():
+        _PHRASES.setdefault(label, phrase or label)
+
+
 # Specific activities are narrated ahead of plain posture/motion.
 _POSTURE = {"sitting", "standing", "walking", "running", "bending", "lying",
             "kneeling", "crawling"}

@@ -1,4 +1,7 @@
-# GPU deployment:   docker compose up -d --build
+# NVIDIA GPU server:          docker compose up -d --build
+# CPU machine or edge board:  docker compose --profile cpu up -d --build monitor-cpu
+#   (x86_64 or arm64; the first start compiles the models for the machine,
+#   a few minutes; a Jetson installs natively instead: ./setup.sh)
 # Then open http://<server>:8000/?token=<ACCESS_TOKEN>
 services:
   monitor:
@@ -24,6 +27,27 @@ services:
               count: 1
               capabilities: [gpu]
 
+  monitor-cpu:
+    profiles: [cpu]
+    build:
+      context: .
+      args:
+        PROFILE: cpu
+    image: human-action-monitor:1.0.0-cpu
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      ACCESS_TOKEN: ${ACCESS_TOKEN:?set ACCESS_TOKEN in .env or the shell}
+      DEVICE: cpu
+      TARGET_FPS: "15"
+      STREAM_MAX_WIDTH: "1280"
+    volumes:
+      - monitor-logs:/app/logs
+      - monitor-uploads:/app/data/samples
+      - monitor-compiled:/app/models/compiled
+
 volumes:
   monitor-logs:
   monitor-uploads:
+  monitor-compiled:

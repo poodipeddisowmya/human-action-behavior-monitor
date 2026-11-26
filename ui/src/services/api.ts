@@ -46,6 +46,25 @@ export interface DatabaseStatus {
   rows: DatabaseRow[];
 }
 
+// What the monitor recognises (/api/activities).
+export interface TrainedActivities {
+  backend: string;
+  activities: string[];
+  trained_at: string | null;
+  clips: Record<string, number>;
+  held_out: {
+    activities: Record<string, { clips: number; recognised: number; confused: number }> | null;
+    false_alarm_clips: number | null;
+    other_clips: number | null;
+  };
+}
+export interface Activities {
+  backend: string;
+  built_in: string[];
+  described_in_words: string[];
+  trained: TrainedActivities | null;
+}
+
 // Recorded demo videos (/api/recordings): the dashboard as recorded.
 export interface Recording {
   file: string;
@@ -190,6 +209,7 @@ export const cameraName = (s: string) =>
 export const api = {
   listPersons: () => json<PersonSummary[]>("/api/persons"),
   recordings:  () => json<Recordings>("/api/recordings"),
+  activities:  () => json<Activities>("/api/activities"),
   database:    (limit = 25) => json<DatabaseStatus>(`/api/database?limit=${limit}`),
   getPerson:   (id: string) => json<PersonDetail>(`/api/persons/${id}`),
   recentEvents: (limit = 50) => json<EventMessage[]>(`/api/events?limit=${limit}`),

@@ -43,8 +43,8 @@ the name and the camera's IP address.
 ## 3. Start on it
 
 ```bash
-./run_jetson.sh --source Reception          # Jetson
-python scripts/run_pipeline.py --source Reception
+./run.sh --source Reception                 # Linux, any board
+run.bat --source Reception                  # Windows
 ```
 
 Or start as usual and pick it in the dashboard's **Source** menu, under
@@ -87,7 +87,7 @@ HTTP, read exactly like a real one):
 ```bash
 python scripts/test_camera.py data/samples/office-people.mp4
 # .env:  CAMERA_TEST=http://127.0.0.1:8554/video.mjpg
-./run_jetson.sh --source Test
+./run.sh --source Test
 ```
 
 Stop and restart it to see the "no signal" state and the reconnection.

@@ -21,6 +21,7 @@ When `ACCESS_TOKEN` is set, every endpoint except `/api/health` needs it:
 | Method | Path | Returns |
 |---|---|---|
 | GET | `/api/events?limit=50&label=falling%20down` | Newest logged activities: person, name, activity, start, duration, confidence, camera (`source`), proof photo URLs. |
+| GET | `/api/activities` | What the monitor recognises: built-in, described in words, and trained (with each trained activity's held-out accuracy). |
 | GET | `/api/database?limit=25` | The database as stored (the dashboard's Database tab): newest rows of `actions` by id, row counts per table, rows written in the last minute and hour, database file and size, proof photos on disk. |
 | GET | `/api/persons` | Everyone tracked, newest first. |
 | GET | `/api/persons/{id}` | One person's activity history (`P001`). |

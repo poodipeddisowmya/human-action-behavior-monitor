@@ -1,0 +1,9 @@
+# Runtimes that make the monitor faster on a CPU (any edge board or PC
+# without an NVIDIA GPU). setup.sh installs them; scripts/optimise_for_device.py
+# measures each on the machine and keeps the fastest (src/utils/compiled_models.py).
+# Not needed on an NVIDIA GPU or a Jetson. Without them everything still
+# works, on plain PyTorch.
+onnx==1.17.0                 # exporting the activity model
+onnxruntime>=1.18,<2         # x86_64 and arm64 wheels
+# ultralytics 8.3.0 exports with openvino.runtime, which OpenVINO 2026 removed.
+openvino>=2024.6,<2026

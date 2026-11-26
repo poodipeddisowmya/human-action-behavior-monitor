@@ -4,7 +4,7 @@ import clsx from "clsx";
 import {
   ArrowRight, Camera, Cctv, Cpu, Database, Images, PersonStanding, Play, ScanFace, ShieldCheck, Sparkles, UserRound,
 } from "lucide-react";
-import { api, Camera as Cam, EventMessage, KnownPerson, Recordings, Showcase, ShowcaseTotals } from "../services/api";
+import { Activities, api, Camera as Cam, EventMessage, KnownPerson, Recordings, Showcase, ShowcaseTotals } from "../services/api";
 import { NEW_ACTIVITIES, NEW_LABELS } from "../services/clips";
 import EvidenceViewer from "./EvidenceViewer";
 import { knownPeopleChanged } from "./KnownPeople";
@@ -107,10 +107,12 @@ export default function Overview({ go }: { go: Go }) {
   const [recs, setRecs] = useState<Recordings | null>(null);
   const [rec, setRec] = useState(0);
   const [cctv, setCctv] = useState<Cam[]>([]);
+  const [acts, setActs] = useState<Activities | null>(null);
 
   useEffect(() => {
     api.showcase().then(setShow).catch(() => {});
     api.recordings().then(setRecs).catch(() => {});
+    api.activities().then(setActs).catch(() => {});
     api.listSources().then((r) => {
       setClips(new Set(r.clips.map((c) => c.filename)));
       setCctv((r.cameras ?? []).filter((c) => c.kind === "cctv"));
@@ -257,6 +259,23 @@ export default function Overview({ go }: { go: Go }) {
           <p className="mt-3 text-xs text-muted">
             On the 29 other comparison clips, neither GPU ever showed a new activity by mistake.
           </p>
+          {acts?.trained && acts.trained.activities.length > 0 && (
+            <div className="mt-3 rounded-md border border-border bg-surface px-3 py-2 text-xs">
+              <div className="font-medium text-slate-200">Trained on example clips (docs/TRAINING.md)</div>
+              {acts.trained.activities.map((a) => {
+                const r = acts.trained!.held_out.activities?.[a];
+                return (
+                  <div key={a} className="mt-0.5 text-muted">
+                    <span className="capitalize text-slate-200">{a}</span>
+                    {r && ` · recognised in ${r.recognised} of ${r.clips} clips it was not trained on`}
+                    {acts.trained!.held_out.other_clips != null &&
+                      ` · false alarm in ${acts.trained!.held_out.false_alarm_clips} of ${acts.trained!.held_out.other_clips} ordinary clips`}
+                    {` · ${countOf(a)} in the log`}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Section>
 
         <Section n={3} icon={<ScanFace size={18} />} title="Face recognition: who is doing it"

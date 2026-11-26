@@ -120,6 +120,11 @@ class OpenVocabRecognizer:
         self._lock = threading.Lock()
         self._model = None
         self._jobs: queue.Queue = queue.Queue(maxsize=1)
+        # Bumped by reset() (a source switch): a look of the previous video,
+        # queued or in progress, must not vote for whoever is in the new one
+        # (one strong look confirms an activity, so a leftover "making tea"
+        # look could label the next clip).
+        self._generation = 0
         self._ready = False
         self._checkpoint = str(cfg.get("model", "microsoft/xclip-base-patch16-zero-shot"))
 
@@ -267,7 +272,7 @@ class OpenVocabRecognizer:
             clip = self._clip(st, now)
             if clip is not None:
                 try:
-                    self._jobs.put_nowait((key, clip))
+                    self._jobs.put_nowait((self._generation, key, clip))
                     st.last_look_at = now
                 except queue.Full:
                     pass
@@ -282,7 +287,9 @@ class OpenVocabRecognizer:
 
     def _worker(self) -> None:
         while True:
-            key, clip = self._jobs.get()
+            gen, key, clip = self._jobs.get()
+            if gen != self._generation:
+                continue
             scores = None
             for attempt in (1, 2):
                 try:
@@ -296,7 +303,7 @@ class OpenVocabRecognizer:
                         print(f"[open-vocab] look failed: {e}", flush=True)
                     self._torch.cuda.empty_cache()
                     time.sleep(0.2)
-            if scores is not None:
+            if scores is not None and gen == self._generation:
                 self._vote(key, scores)
 
     def _vote(self, key: int, scores: dict[str, float]) -> None:
@@ -362,4 +369,9 @@ class OpenVocabRecognizer:
 
     def reset(self) -> None:
         with self._lock:
+            self._generation += 1
             self._states.clear()
+        try:
+            self._jobs.get_nowait()          # a look queued for the old video
+        except queue.Empty:
+            pass

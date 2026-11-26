@@ -49,7 +49,27 @@ def test_too_close_to_call_is_unknown():
 def _identifier():
     f = FaceIdentifier.__new__(FaceIdentifier)
     f.gallery, f._tracks, f._lock = _gallery(), {7: _Track()}, threading.Lock()
+    import queue
+    f._jobs, f._generation = queue.Queue(maxsize=4), 0
     return f
+
+
+def test_looks_from_the_previous_video_never_name_anyone():
+    """Seen live: looks queued on one clip landed, after a source switch, on
+    the new clip's person with the same track number and named a woman after
+    the man in the previous clip."""
+    f = _identifier()
+    old = f._generation
+    f._jobs.put_nowait((old, 7, None, None, None))
+    f.reset()                                         # the source switches
+    assert f._jobs.empty()                            # queued looks dropped
+    f._tracks[7] = _Track()                           # someone new is track 7
+    f._vote(7, 1, 0.9, old)                           # looks that were in progress
+    f._vote(7, 1, 0.9, old)
+    assert f.name(7) is None
+    f._vote(7, 1, 0.9, f._generation)                 # this video's own looks
+    f._vote(7, 1, 0.9, f._generation)
+    assert f.name(7) == "Asha"
 
 
 def test_named_after_two_agreeing_looks_and_kept():

@@ -52,6 +52,12 @@ class Pipeline:
 
         self._tracker = PersonTracker()   # detection + pose + tracking in one pass
         self._classifier = ActionClassifier()
+        # Activities trained on site footage get subtitle wording too.
+        trained = getattr(self._classifier, "_custom", None)
+        if trained is not None:
+            from src.description.captions import add_phrases
+            add_phrases({a: trained.head.meta.get("phrases", {}).get(a, a)
+                         for a in trained.activities})
         # Activities defined by text (making tea, taking tablets...), from a
         # zero-shot video transformer in its own thread; GPU only.
         self._open_vocab = OpenVocabRecognizer()
@@ -424,6 +430,12 @@ class Pipeline:
             ov = self._open_vocab.current(t.person_id, len(tracks) == 1)
             if ov is not None and (pred is None or not pred.label.startswith("falling")):
                 pred = ov
+            # An activity trained on site footage (docs/TRAINING.md) is the
+            # most specific answer of all: it was taught on these cameras.
+            custom = getattr(self._classifier, "custom_current", None)
+            cu = custom(t.person_id, len(tracks) == 1) if custom else None
+            if cu is not None and (pred is None or not pred.label.startswith("falling")):
+                pred = cu
             self.faces.observe(t.person_id, image, t.xyxy, t.keypoints)
             fall = self._falls.update(t.person_id, t.xyxy, t.keypoints,
                                       timestamp if timestamp is not None else time.monotonic())

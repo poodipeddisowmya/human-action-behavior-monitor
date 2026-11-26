@@ -13,6 +13,7 @@ and any clip can be selected or uploaded from there.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -78,7 +79,9 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=settings.api_port)
     args = parser.parse_args()
 
-    source = args.source or default_source()
+    # SOURCE in .env: what a service started at boot plays (a CCTV camera's
+    # name, a camera index or a file); --source overrides it.
+    source = args.source or os.getenv("SOURCE", "").strip() or default_source()
     set_pipeline_source(build_source_factory(source))
 
     url = f"http://localhost:{args.port}"

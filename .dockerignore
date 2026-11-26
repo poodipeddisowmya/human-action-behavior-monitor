@@ -13,3 +13,11 @@ data/datasets
 data/candidates
 data/samples/WhatsApp_*
 *.docx
+# Made per machine (TensorRT engines, compiled CPU models) or private to a site.
+models/compiled
+models/*.engine
+models/custom_activities/backup
+data/training
+data/training-holdout
+data/evidence
+data/faces
